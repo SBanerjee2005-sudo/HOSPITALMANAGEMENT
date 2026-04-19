@@ -1,56 +1,36 @@
-const Patients = () => {
-  const patients = [
-    { id: 1, name: "John Smith", age: 45, gender: "Male", disease: "Diabetes" },
-    { id: 2, name: "Sarah Lee", age: 32, gender: "Female", disease: "Migraine" },
-    { id: 3, name: "Rahul Sharma", age: 50, gender: "Male", disease: "Heart Disease" },
-  ];
+const patients = [
+  { name: "Rahul Das", age: 30, disease: "Diabetes" },
+  { name: "Tumpa Sen", age: 25, disease: "Fever" },
+  { name: "Suman Ghosh", age: 45, disease: "Heart Issue" },
+  { name: "Mita Roy", age: 35, disease: "Asthma" },
+  { name: "Abhijit Pal", age: 50, disease: "BP" },
+];
 
+export default function Patients() {
   return (
     <div>
-      <h1 style={{ fontSize: "28px", marginBottom: "20px" }}>Patients</h1>
+      <h1 className="text-2xl font-semibold mb-4">Patients</h1>
 
-      <input
-        type="text"
-        placeholder="Search patients..."
-        style={{
-          padding: "10px",
-          marginBottom: "20px",
-          width: "300px",
-          borderRadius: "6px",
-          border: "1px solid #ccc"
-        }}
-      />
+      <div className="bg-white rounded-xl shadow overflow-hidden">
+        {/* Header */}
+        <div className="grid grid-cols-3 px-6 py-3 text-sm font-semibold text-gray-500 border-b">
+          <span>Name</span>
+          <span>Age</span>
+          <span>Disease</span>
+        </div>
 
-      <table style={{
-        width: "100%",
-        background: "white",
-        borderRadius: "10px",
-        overflow: "hidden"
-      }}>
-        <thead style={{ background: "#f1f5f9" }}>
-          <tr>
-            <th style={{ padding: "10px" }}>ID</th>
-            <th style={{ padding: "10px" }}>Name</th>
-            <th style={{ padding: "10px" }}>Age</th>
-            <th style={{ padding: "10px" }}>Gender</th>
-            <th style={{ padding: "10px" }}>Disease</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {patients.map((p) => (
-            <tr key={p.id} style={{ textAlign: "center" }}>
-              <td style={{ padding: "10px" }}>{p.id}</td>
-              <td style={{ padding: "10px" }}>{p.name}</td>
-              <td style={{ padding: "10px" }}>{p.age}</td>
-              <td style={{ padding: "10px" }}>{p.gender}</td>
-              <td style={{ padding: "10px" }}>{p.disease}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        {/* Rows */}
+        {patients.map((p, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-3 px-6 py-4 text-sm border-b border-gray-200/70 hover:bg-gray-50 transition cursor-pointer"
+          >
+            <span className="font-medium text-gray-800">{p.name}</span>
+            <span className="text-gray-600">{p.age}</span>
+            <span className="text-gray-600">{p.disease}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
-};
-
-export default Patients;
+}

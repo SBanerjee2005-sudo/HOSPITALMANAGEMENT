@@ -1,58 +1,19 @@
-import React from "react";
-
-const Settings = () => {
+export default function Settings() {
   return (
     <div>
-      <h1 style={{ marginBottom: "5px" }}>Settings</h1>
-      <p style={{ color: "gray", marginBottom: "20px" }}>
-        Manage your account settings
-      </p>
+      <h1 className="text-3xl font-bold mb-6">Settings</h1>
 
-      <div
-        style={{
-          background: "white",
-          padding: "20px",
-          borderRadius: "10px",
-          maxWidth: "400px",
-        }}
-      >
-        <div style={{ marginBottom: "15px" }}>
-          <label>Name</label>
-          <input style={inputStyle} placeholder="Admin User" />
-        </div>
+      <div className="bg-white p-6 rounded-xl shadow-md border w-96">
+        <label className="block mb-2">Name</label>
+        <input className="border w-full p-2 mb-4 rounded" defaultValue="Swarnavo" />
 
-        <div style={{ marginBottom: "15px" }}>
-          <label>Email</label>
-          <input style={inputStyle} placeholder="admin@hospital.com" />
-        </div>
+        <label className="block mb-2">Email</label>
+        <input className="border w-full p-2 mb-4 rounded" defaultValue="admin@hospital.com" />
 
-        <div style={{ marginBottom: "15px" }}>
-          <label>
-            <input type="checkbox" /> Enable Notifications
-          </label>
-        </div>
-
-        <button style={buttonStyle}>Save Changes</button>
+        <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+          Save Changes
+        </button>
       </div>
     </div>
   );
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px",
-  marginTop: "5px",
-  border: "1px solid #ccc",
-  borderRadius: "5px",
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: "10px",
-  background: "#2563eb",
-  color: "white",
-  border: "none",
-  borderRadius: "6px",
-  cursor: "pointer",
-};
-
-export default Settings;
+}
