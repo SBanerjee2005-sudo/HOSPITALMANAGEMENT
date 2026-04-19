@@ -1,88 +1,36 @@
-const Appointments = () => {
-  const appointments = [
-    {
-      id: 1,
-      patient: "John Smith",
-      doctor: "Dr. Emily Johnson",
-      time: "10:00 AM",
-      status: "Scheduled",
-    },
-    {
-      id: 2,
-      patient: "Sarah Lee",
-      doctor: "Dr. Michael Chen",
-      time: "11:30 AM",
-      status: "Completed",
-    },
-    {
-      id: 3,
-      patient: "Rahul Sharma",
-      doctor: "Dr. Sarah Martinez",
-      time: "2:00 PM",
-      status: "Cancelled",
-    },
-  ];
+const appointments = [
+  { patient: "Rahul Das", doctor: "Dr. Mita Roy", time: "10:00 AM" },
+  { patient: "Tumpa Sen", doctor: "Dr. Rahul Das", time: "11:00 AM" },
+  { patient: "Suman Ghosh", doctor: "Dr. Tumpa Sen", time: "12:00 PM" },
+  { patient: "Mita Roy", doctor: "Dr. Abhijit Pal", time: "1:00 PM" },
+  { patient: "Abhijit Pal", doctor: "Dr. Suman Ghosh", time: "2:00 PM" },
+];
 
+export default function Appointments() {
   return (
     <div>
-      <h1 style={{ fontSize: "28px", marginBottom: "20px" }}>
-        Appointments
-      </h1>
+      <h1 className="text-2xl font-semibold mb-4">Appointments</h1>
 
-      <table
-        style={{
-          width: "100%",
-          background: "white",
-          borderRadius: "10px",
-          overflow: "hidden",
-        }}
-      >
-        <thead style={{ background: "#f1f5f9" }}>
-          <tr>
-            <th style={{ padding: "12px" }}>ID</th>
-            <th style={{ padding: "12px" }}>Patient</th>
-            <th style={{ padding: "12px" }}>Doctor</th>
-            <th style={{ padding: "12px" }}>Time</th>
-            <th style={{ padding: "12px" }}>Status</th>
-          </tr>
-        </thead>
+      <div className="bg-white rounded-xl shadow overflow-hidden">
+        {/* Header */}
+        <div className="grid grid-cols-3 px-6 py-3 text-sm font-semibold text-gray-500 border-b">
+          <span>Patient</span>
+          <span>Doctor</span>
+          <span>Time</span>
+        </div>
 
-        <tbody>
-          {appointments.map((a) => (
-            <tr key={a.id} style={{ textAlign: "center" }}>
-              <td style={{ padding: "12px" }}>{a.id}</td>
-              <td style={{ padding: "12px" }}>{a.patient}</td>
-              <td style={{ padding: "12px" }}>{a.doctor}</td>
-              <td style={{ padding: "12px" }}>{a.time}</td>
-              <td style={{ padding: "12px" }}>
-                <span
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: "20px",
-                    background:
-                      a.status === "Scheduled"
-                        ? "#dbeafe"
-                        : a.status === "Completed"
-                        ? "#d1fae5"
-                        : "#fee2e2",
-                    color:
-                      a.status === "Scheduled"
-                        ? "#1e40af"
-                        : a.status === "Completed"
-                        ? "#065f46"
-                        : "#991b1b",
-                    fontSize: "12px",
-                  }}
-                >
-                  {a.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        {/* Rows */}
+        {appointments.map((a, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-3 px-6 py-4 text-sm border-b border-gray-200/70 hover:bg-gray-50 transition cursor-pointer"
+          >
+            <span className="font-medium text-gray-800">{a.patient}</span>
+            <span className="text-gray-600">{a.doctor}</span>
+            <span className="text-gray-600">{a.time}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
-};
-
-export default Appointments;
+}
