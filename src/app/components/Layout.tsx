@@ -1,79 +1,59 @@
-import { Outlet, Link, useLocation } from "react-router";
-import {
-  LayoutDashboard,
-  Users,
-  UserCog,
-  Calendar,
-  FileText,
-  Settings as SettingsIcon,
-  Hospital,
-} from "lucide-react";
+import { NavLink, Outlet } from "react-router-dom";
 
-const Layout = () => {
-  const location = useLocation();
-
-  const navItems = [
-    { path: "/", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/patients", label: "Patients", icon: Users },
-    { path: "/doctors", label: "Doctors", icon: UserCog },
-    { path: "/appointments", label: "Appointments", icon: Calendar },
-    { path: "/billing", label: "Billing", icon: FileText },
-    { path: "/settings", label: "Settings", icon: SettingsIcon },
-  ];
-
-  const isActive = (path: string) => {
-    if (path === "/") return location.pathname === "/";
-    return location.pathname.startsWith(path);
-  };
+export default function Layout() {
+  const linkClass = ({ isActive }: any) =>
+    `flex items-center px-4 py-3 rounded-xl transition-all duration-200 relative
+    ${
+      isActive
+        ? "bg-blue-50 text-blue-600 font-semibold"
+        : "text-gray-600 hover:bg-gray-100 hover:text-blue-600"
+    }`;
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div className="flex min-h-screen bg-gray-100">
+      
       {/* Sidebar */}
-      <aside
-        style={{
-          width: "220px",
-          background: "#f8fafc",
-          padding: "20px",
-          borderRight: "1px solid #e5e7eb",
-        }}
-      >
-        <h2 style={{ marginBottom: "20px" }}>MediCare</h2>
+      <aside className="w-64 bg-white border-r shadow-sm p-4">
+        
+        {/* Logo */}
+        <div className="text-2xl font-bold text-blue-600 mb-8 px-2">
+          MediCare
+        </div>
 
-        <nav>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path);
+        {/* Menu */}
+        <nav className="space-y-2">
 
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "10px",
-                  marginBottom: "8px",
-                  borderRadius: "6px",
-                  textDecoration: "none",
-                  color: active ? "#2563eb" : "#374151",
-                  background: active ? "#e0f2fe" : "transparent",
-                }}
-              >
-                <Icon size={18} />
-                {item.label}
-              </Link>
-            );
-          })}
+          <NavLink to="/" className={linkClass}>
+            Dashboard
+          </NavLink>
+
+          <NavLink to="/patients" className={linkClass}>
+            Patients
+          </NavLink>
+
+          <NavLink to="/doctors" className={linkClass}>
+            Doctors
+          </NavLink>
+
+          <NavLink to="/appointments" className={linkClass}>
+            Appointments
+          </NavLink>
+
+          <NavLink to="/billing" className={linkClass}>
+            Billing
+          </NavLink>
+
+          <NavLink to="/settings" className={linkClass}>
+            Settings
+          </NavLink>
+
         </nav>
       </aside>
 
       {/* Main Content */}
-      <main style={{ flex: 1, padding: "20px", background: "#f1f5f9" }}>
+      <main className="flex-1 p-8">
         <Outlet />
       </main>
     </div>
   );
-};
-
-export default Layout;
+}
