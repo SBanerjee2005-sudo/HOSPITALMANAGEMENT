@@ -52,7 +52,7 @@ const COLORS = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6"];
 /* ===================== TOOLTIP ===================== */
 
 const CurrencyTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
+  if (active && payload?.length) {
     return (
       <div className="bg-white border shadow px-3 py-2 rounded text-sm">
         <p className="font-medium">{label}</p>
@@ -66,7 +66,7 @@ const CurrencyTooltip = ({ active, payload, label }: any) => {
 };
 
 const BarTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
+  if (active && payload?.length) {
     return (
       <div className="bg-white border shadow px-3 py-2 rounded text-sm">
         <p className="font-medium">{label}</p>
@@ -98,36 +98,13 @@ export default function Reports() {
 
       {/* REPORT CARDS */}
       <div className="grid grid-cols-4 gap-6 mb-6">
-        <Card
-          icon={<DollarSign size={20} />}
-          color="bg-green-100 text-green-600"
-          title="Monthly Revenue Report"
-          desc="Detailed revenue breakdown"
-        />
-
-        <Card
-          icon={<Users size={20} />}
-          color="bg-blue-100 text-blue-600"
-          title="Patient Statistics"
-          desc="Comprehensive patient analysis"
-        />
-
-        <Card
-          icon={<Calendar size={20} />}
-          color="bg-purple-100 text-purple-600"
-          title="Appointment Summary"
-          desc="Overview of appointments"
-        />
-
-        <Card
-          icon={<TrendingUp size={20} />}
-          color="bg-teal-100 text-teal-600"
-          title="Performance Metrics"
-          desc="Hospital performance indicators"
-        />
+        <Card icon={<DollarSign size={20} />} color="bg-green-100 text-green-600" title="Monthly Revenue Report" desc="Detailed revenue breakdown" />
+        <Card icon={<Users size={20} />} color="bg-blue-100 text-blue-600" title="Patient Statistics" desc="Comprehensive patient analysis" />
+        <Card icon={<Calendar size={20} />} color="bg-purple-100 text-purple-600" title="Appointment Summary" desc="Overview of appointments" />
+        <Card icon={<TrendingUp size={20} />} color="bg-teal-100 text-teal-600" title="Performance Metrics" desc="Hospital performance indicators" />
       </div>
 
-      {/* FILTER (NEW REALISTIC ADDITION) */}
+      {/* FILTER */}
       <div className="mb-6 flex justify-end">
         <select className="border px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
           <option>This Month</option>
@@ -141,9 +118,7 @@ export default function Reports() {
 
         {/* LINE */}
         <div className="bg-white p-4 rounded-xl shadow">
-          <h3 className="mb-3 font-medium">
-            Monthly Revenue Trends ($)
-          </h3>
+          <h3 className="mb-3 font-medium">Monthly Revenue Trends ($)</h3>
 
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={revenueData}>
@@ -151,21 +126,14 @@ export default function Reports() {
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip content={<CurrencyTooltip />} />
-              <Line
-                type="monotone"
-                dataKey="revenue"
-                stroke="#10b981"
-                strokeWidth={2}
-              />
+              <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* BAR */}
         <div className="bg-white p-4 rounded-xl shadow">
-          <h3 className="mb-3 font-medium">
-            Patients by Department
-          </h3>
+          <h3 className="mb-3 font-medium">Patients by Department</h3>
 
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={deptData}>
@@ -179,14 +147,12 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* LOWER SECTION */}
+      {/* LOWER */}
       <div className="grid grid-cols-2 gap-6">
 
         {/* PIE */}
         <div className="bg-white p-4 rounded-xl shadow">
-          <h3 className="mb-3 font-medium">
-            Patient Status Distribution
-          </h3>
+          <h3 className="mb-3 font-medium">Patient Status Distribution</h3>
 
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
@@ -196,15 +162,14 @@ export default function Reports() {
                 cx="50%"
                 cy="50%"
                 outerRadius={80}
-                label={({ name, percent }) =>
-                  `${name}: ${(percent * 100).toFixed(0)}%`
+                label={({ name, percent }: any) =>
+                  `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
                 }
               >
                 {statusData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i]} />
                 ))}
               </Pie>
-
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -212,36 +177,15 @@ export default function Reports() {
 
         {/* METRICS */}
         <div className="space-y-4">
-          <Metric
-            title="Average Daily Patients"
-            value="42"
-            color="bg-blue-100 text-blue-600"
-          />
-
-          <Metric
-            title="Success Rate"
-            value="94.5%"
-            color="bg-green-100 text-green-600"
-          />
-
-          <Metric
-            title="Avg. Appointment Duration"
-            value="28 min"
-            color="bg-purple-100 text-purple-600"
-          />
-
-          <Metric
-            title="Monthly Revenue"
-            value="$67,000"
-            color="bg-teal-100 text-teal-600"
-          />
+          <Metric title="Average Daily Patients" value="42" color="bg-blue-100 text-blue-600" />
+          <Metric title="Success Rate" value="94.5%" color="bg-green-100 text-green-600" />
+          <Metric title="Avg. Appointment Duration" value="28 min" color="bg-purple-100 text-purple-600" />
+          <Metric title="Monthly Revenue" value="$67,000" color="bg-teal-100 text-teal-600" />
         </div>
       </div>
     </div>
   );
 }
-
-/* ===================== SMALL COMPONENTS ===================== */
 
 function Card({ icon, color, title, desc }: any) {
   return (
