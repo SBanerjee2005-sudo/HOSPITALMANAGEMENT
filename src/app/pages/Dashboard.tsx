@@ -1,4 +1,3 @@
-import React from "react";
 import {
   LineChart,
   Line,
@@ -194,11 +193,11 @@ function Dashboard() {
                 outerRadius={85}
                 paddingAngle={3}
                 dataKey="value"
-                label={({ percent }) =>
-                  `${(percent * 100).toFixed(0)}%`
+                label={({ percent }: any) =>
+                  `${((percent ?? 0) * 100).toFixed(0)}%`
                 }
               >
-                {pieData.map((entry, index) => (
+                {pieData.map((_, index) => (
                   <Cell key={index} fill={COLORS[index]} />
                 ))}
               </Pie>
