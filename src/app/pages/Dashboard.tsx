@@ -1,287 +1,436 @@
+import { useState } from "react";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
   Bar,
-  PieChart,
-  Pie,
+  BarChart,
+  CartesianGrid,
   Cell,
   Legend,
-  CartesianGrid,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
+import { Activity, Building2, Stethoscope, Users } from "lucide-react";
+import { adminPatients, doctors, hospitals } from "../data";
 
-import { Users, Stethoscope, Calendar, DollarSign } from "lucide-react";
+type EmergencyStatus = "Active" | "Busy" | "Unavailable";
 
-/* ===================== TOOLTIP ===================== */
-const CustomTooltip = ({ active, payload, label }: any) => {
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ value: number | string }>;
+  label?: string;
+};
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white border shadow-lg px-3 py-2 rounded-lg text-sm">
-        <p className="font-medium">{label}</p>
-        <p className="text-teal-600 font-semibold">
-          {payload[0].value}
-        </p>
+      <div className="surface-card px-3 py-2 text-sm">
+        <p className="font-semibold text-slate-900">{label}</p>
+        <p className="font-semibold text-cyan-700">{payload[0].value}</p>
       </div>
     );
   }
   return null;
 };
 
-function Dashboard() {
-  /* ===================== DATA ===================== */
+export default function Dashboard() {
+  const [selectedEmergencyStatus, setSelectedEmergencyStatus] =
+    useState<EmergencyStatus>("Active");
+  const [selectedStatusHospitalId, setSelectedStatusHospitalId] = useState<number | null>(null);
 
-  const stats = [
+  const totalBedsAvailable = hospitals.reduce(
+    (sum, hospital) => sum + hospital.bedsAvailable,
+    0
+  );
+
+  const activeEmergencyCenters = hospitals.filter(
+    (hospital) => hospital.emergencyStatus === "Active"
+  ).length;
+
+  const openHospitals = hospitals.filter((hospital) => hospital.isOpen).length;
+
+  const quickStats = [
     {
-      title: "Total Patients",
-      value: "156",
-      change: "+12%",
-      icon: Users,
-      color: "bg-blue-100 text-blue-600",
+      title: "Hospitals Network",
+      value: hospitals.length,
+      note: `${openHospitals} open now`,
+      icon: Building2,
     },
     {
-      title: "Total Doctors",
-      value: "24",
-      change: "+3%",
+      title: "Doctors On Platform",
+      value: doctors.length,
+      note: "Across all Kolkata hospitals",
       icon: Stethoscope,
-      color: "bg-teal-100 text-teal-600",
     },
     {
-      title: "Appointments",
-      value: "89",
-      change: "+8%",
-      icon: Calendar,
-      color: "bg-purple-100 text-purple-600",
+      title: "Active Patients",
+      value: adminPatients.length,
+      note: "Centralized patient records",
+      icon: Users,
     },
     {
-      title: "Revenue",
-      value: "$246k",
-      change: "+15%",
-      icon: DollarSign,
-      color: "bg-green-100 text-green-600",
+      title: "Emergency Ready",
+      value: activeEmergencyCenters,
+      note: `${totalBedsAvailable} beds available`,
+      icon: Activity,
     },
   ];
 
-  const patientTrend = [
-    { name: "Oct", value: 120 },
-    { name: "Nov", value: 135 },
-    { name: "Dec", value: 142 },
-    { name: "Jan", value: 150 },
-    { name: "Feb", value: 155 },
-    { name: "Mar", value: 160 },
+  const bedsData = hospitals.map((hospital) => ({
+    name: hospital.name.replace(" Hospital Kolkata", ""),
+    beds: hospital.bedsAvailable,
+  }));
+
+  const emergencyBreakdown: Array<{
+    name: EmergencyStatus;
+    value: number;
+    color: string;
+  }> = [
+    {
+      name: "Active",
+      value: hospitals.filter((hospital) => hospital.emergencyStatus === "Active")
+        .length,
+      color: "#0891b2",
+    },
+    {
+      name: "Busy",
+      value: hospitals.filter((hospital) => hospital.emergencyStatus === "Busy")
+        .length,
+      color: "#f59e0b",
+    },
+    {
+      name: "Unavailable",
+      value: hospitals.filter(
+        (hospital) => hospital.emergencyStatus === "Unavailable"
+      ).length,
+      color: "#ef4444",
+    },
   ];
 
-  const weeklyAppointments = [
-    { day: "Mon", value: 12 },
-    { day: "Tue", value: 15 },
-    { day: "Wed", value: 18 },
-    { day: "Thu", value: 14 },
-    { day: "Fri", value: 16 },
-    { day: "Sat", value: 8 },
-    { day: "Sun", value: 6 },
-  ];
+  const selectedStatusHospitals = hospitals.filter(
+    (hospital) => hospital.emergencyStatus === selectedEmergencyStatus
+  );
 
-  const pieData = [
-    { name: "ICU", value: 40 },
-    { name: "General Ward", value: 35 },
-    { name: "Emergency", value: 25 },
-  ];
+  const resolvedSelectedStatusHospitalId =
+    selectedStatusHospitalId &&
+    selectedStatusHospitals.some((hospital) => hospital.id === selectedStatusHospitalId)
+      ? selectedStatusHospitalId
+      : selectedStatusHospitals[0]?.id ?? null;
 
-  const COLORS = ["#3b82f6", "#10b981", "#f59e0b"];
+  const selectedStatusHospital =
+    selectedStatusHospitals.find((hospital) => hospital.id === resolvedSelectedStatusHospitalId) ??
+    null;
 
-  const patients = [
-    { name: "Rahul Das", disease: "Diabetes", status: "In Treatment" },
-    { name: "Tumpa Sen", disease: "Flu", status: "Admitted" },
-    { name: "Suman Ghosh", disease: "Heart Issue", status: "In Treatment" },
-    { name: "Mita Roy", disease: "Fever", status: "Discharged" },
-  ];
+  const selectedStatusBreakdown = (() => {
+    const rows = selectedStatusHospitals.map((hospital) => ({
+      id: hospital.id,
+      name: hospital.name,
+      load: adminPatients.filter((patient) => patient.hospitalId === hospital.id).length,
+      beds: hospital.bedsAvailable,
+    }));
 
-  const appointments = [
-    { name: "Rahul Das", doctor: "Dr. Tumpa Sen", time: "09:00 AM", status: "Scheduled" },
-    { name: "Tumpa Sen", doctor: "Dr. Mita Roy", time: "02:00 PM", status: "In Progress" },
-    { name: "Suman Ghosh", doctor: "Dr. Rahul Das", time: "11:30 AM", status: "Completed" },
-  ];
+    if (rows.length === 0) return [];
 
-  const statusStyle = (status: string) => {
-    if (status === "Admitted") return "bg-blue-100 text-blue-600";
-    if (status === "In Treatment") return "bg-yellow-100 text-yellow-700";
-    if (status === "Discharged") return "bg-green-100 text-green-600";
-    return "bg-gray-100";
+    const totalLoad = rows.reduce((sum, item) => sum + item.load, 0);
+
+    if (totalLoad === 0) {
+      const base = Math.floor(100 / rows.length);
+      let remaining = 100 - base * rows.length;
+
+      return rows.map((item) => {
+        const bonus = remaining > 0 ? 1 : 0;
+        if (remaining > 0) remaining -= 1;
+        return {
+          ...item,
+          percentage: base + bonus,
+        };
+      });
+    }
+
+    const withRaw = rows.map((item) => {
+      const raw = (item.load / totalLoad) * 100;
+      return {
+        ...item,
+        raw,
+        percentage: Math.floor(raw),
+        fraction: raw - Math.floor(raw),
+      };
+    });
+
+    const remaining = 100 - withRaw.reduce((sum, item) => sum + item.percentage, 0);
+
+    withRaw
+      .sort((a, b) => b.fraction - a.fraction)
+      .forEach((item, index) => {
+        if (index < remaining) {
+          item.percentage += 1;
+        }
+      });
+
+    return withRaw.map(({ id, name, load, beds, percentage }) => ({
+      id,
+      name,
+      load,
+      beds,
+      percentage,
+    }));
+  })();
+
+  const selectedStatusTotalPercentage = selectedStatusBreakdown.reduce(
+    (sum, item) => sum + item.percentage,
+    0
+  );
+
+  const recentPatients = [...adminPatients]
+    .sort((a, b) => (a.id < b.id ? 1 : -1))
+    .slice(0, 4);
+
+  const patientStatusClass = (status: string) => {
+    if (status === "Admitted") return "bg-rose-50 text-rose-700";
+    if (status === "In Treatment") return "bg-amber-50 text-amber-700";
+    if (status === "Discharged") return "bg-emerald-50 text-emerald-700";
+    if (status === "Waiting") return "bg-cyan-50 text-cyan-700";
+    return "bg-slate-50 text-slate-700";
   };
 
   return (
-    <div className="p-6 space-y-6">
-
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard Overview</h1>
-          <p className="text-gray-500">
-            Welcome back! Here's what's happening today.
-          </p>
-        </div>
-
-        <span className="text-sm text-green-600 font-medium animate-pulse">
-          ● Live
-        </span>
+    <div className="space-y-6">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">
+          Admin Control Center
+        </p>
+        <h1 className="mt-2 text-3xl font-extrabold text-slate-900">
+          Kolkata Hospital Network Dashboard
+        </h1>
+        <p className="text-slate-600">
+          Centralized live operations across all registered hospitals.
+        </p>
       </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-4 gap-6">
-        {stats.map((s, i) => {
-          const Icon = s.icon;
-          return (
-            <div
-              key={i}
-              className="bg-white p-5 rounded-xl shadow-md border hover:shadow-xl hover:-translate-y-1 transition duration-300 cursor-pointer"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <div className={`p-3 rounded-lg ${s.color}`}>
-                  <Icon size={20} />
-                </div>
+      <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {quickStats.map((stat) => {
+          const Icon = stat.icon;
 
-                <span className="text-green-600 text-sm font-medium">
-                  ↗ {s.change}
+          return (
+            <div key={stat.title} className="surface-card p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-600">{stat.title}</p>
+                <span className="rounded-lg bg-cyan-50 p-2 text-cyan-700">
+                  <Icon size={16} />
                 </span>
               </div>
-
-              <h2 className="text-2xl font-bold">{s.value}</h2>
-              <p className="text-gray-500">{s.title}</p>
+              <p className="text-3xl font-extrabold text-slate-900">{stat.value}</p>
+              <p className="mt-1 text-sm text-slate-500">{stat.note}</p>
             </div>
           );
         })}
       </div>
 
-      {/* CHARTS */}
-      <div className="grid grid-cols-3 gap-6">
-
-        {/* LINE */}
-        <div className="bg-white p-6 rounded-xl shadow-md border col-span-2">
-          <h2 className="font-semibold mb-4">Patient Trends</h2>
-
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={patientTrend}>
-              <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-              <XAxis dataKey="name" />
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.7fr_1fr]">
+        <div className="surface-card p-5">
+          <h2 className="mb-4 text-lg font-bold text-slate-900">Bed Availability by Hospital</h2>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={bedsData} margin={{ top: 8, right: 12, left: 4, bottom: 28 }}>
+              <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.25} />
+              <XAxis
+                dataKey="name"
+                interval={0}
+                angle={-15}
+                textAnchor="end"
+                height={64}
+                tick={{ fontSize: 12 }}
+              />
               <YAxis />
               <Tooltip content={<CustomTooltip />} />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-              />
-            </LineChart>
+              <Bar dataKey="beds" radius={[8, 8, 0, 0]} fill="#0891b2" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* PIE */}
-        <div className="bg-white p-6 rounded-xl shadow-md border">
-          <h2 className="font-semibold mb-4">Department Usage</h2>
-
-          <ResponsiveContainer width="100%" height={250}>
+        <div className="surface-card p-5">
+          <h2 className="mb-4 text-lg font-bold text-slate-900">Emergency Status Mix</h2>
+          <ResponsiveContainer width="100%" height={280}>
             <PieChart>
               <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={85}
-                paddingAngle={3}
+                data={emergencyBreakdown}
                 dataKey="value"
-                label={({ percent }: any) =>
-                  `${((percent ?? 0) * 100).toFixed(0)}%`
-                }
+                nameKey="name"
+                innerRadius={56}
+                outerRadius={90}
+                paddingAngle={3}
+                labelLine={false}
               >
-                {pieData.map((_, index) => (
-                  <Cell key={index} fill={COLORS[index]} />
+                {emergencyBreakdown.map((entry) => (
+                  <Cell
+                    key={entry.name}
+                    fill={entry.color}
+                    className="cursor-pointer"
+                    stroke={selectedEmergencyStatus === entry.name ? "#0f172a" : "#ffffff"}
+                    strokeWidth={selectedEmergencyStatus === entry.name ? 2 : 1}
+                    onClick={() => {
+                      setSelectedEmergencyStatus(entry.name);
+                      setSelectedStatusHospitalId(
+                        hospitals.find((hospital) => hospital.emergencyStatus === entry.name)?.id ??
+                          null
+                      );
+                    }}
+                  />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
-        </div>
-      </div>
 
-      {/* BAR */}
-      <div className="bg-white p-6 rounded-xl shadow-md border">
-        <h2 className="font-semibold mb-4">Weekly Appointments</h2>
-
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={weeklyAppointments}>
-            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-            <XAxis dataKey="day" />
-            <YAxis />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar
-              dataKey="value"
-              fill="#14b8a6"
-              radius={[8, 8, 0, 0]}
-              barSize={20}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* TABLES */}
-      <div className="grid grid-cols-2 gap-6">
-
-        {/* APPOINTMENTS */}
-        <div className="bg-white p-6 rounded-xl shadow-md border">
-          <h2 className="font-semibold mb-4">Recent Appointments</h2>
-
-          {appointments.map((item, i) => (
-            <div
-              key={i}
-              className="flex justify-between py-3 border-b border-gray-200/70 hover:bg-gray-50 px-2 rounded transition cursor-pointer"
-            >
-              <div>
-                <p className="font-medium">{item.name}</p>
-                <p className="text-sm text-gray-500">{item.doctor}</p>
-              </div>
-
-              <div className="text-right">
-                <p>{item.time}</p>
-                <span className="text-blue-600 text-sm">
-                  {item.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* PATIENTS */}
-        <div className="bg-white p-6 rounded-xl shadow-md border">
-          <h2 className="font-semibold mb-4">Recent Patients</h2>
-
-          {patients.map((p, i) => (
-            <div
-              key={i}
-              className="flex justify-between items-center py-3 border-b border-gray-200/70 hover:bg-gray-50 px-2 rounded transition cursor-pointer"
-            >
-              <div>
-                <p className="font-medium">{p.name}</p>
-                <p className="text-sm text-gray-500">{p.disease}</p>
-              </div>
-
-              <span
-                className={`text-xs px-2 py-1 rounded-full ${statusStyle(
-                  p.status
-                )}`}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {emergencyBreakdown.map((item) => (
+              <button
+                key={item.name}
+                onClick={() => {
+                  setSelectedEmergencyStatus(item.name);
+                  setSelectedStatusHospitalId(
+                    hospitals.find((hospital) => hospital.emergencyStatus === item.name)?.id ??
+                      null
+                  );
+                }}
+                className={`interactive-chip rounded-full px-3 py-1 text-xs font-semibold ${
+                  selectedEmergencyStatus === item.name
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-700"
+                }`}
               >
-                {p.status}
-              </span>
+                {item.name} ({item.value})
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3 rounded-xl border border-slate-200 bg-white/80 p-3">
+            <p className="text-sm font-semibold text-slate-900">
+              {selectedEmergencyStatus} Hospitals Percentage Split
+            </p>
+            <p className="text-xs text-slate-500">
+              Percentage uses patient load inside this status group and always totals 100%.
+            </p>
+
+            <div className="mt-3 space-y-2">
+              {selectedStatusBreakdown.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSelectedStatusHospitalId(item.id)}
+                  className={`w-full rounded-lg px-3 py-2 text-left transition ${
+                    resolvedSelectedStatusHospitalId === item.id
+                      ? "bg-cyan-50 ring-1 ring-cyan-200"
+                      : "bg-slate-50 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+                    <p className="text-sm font-bold text-cyan-700">{item.percentage}%</p>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Patients: {item.load} | Beds: {item.beds}
+                  </p>
+                </button>
+              ))}
             </div>
-          ))}
+
+            <div className="mt-3 border-t border-slate-200 pt-2 text-sm font-semibold text-slate-800">
+              Total: {selectedStatusTotalPercentage}%
+            </div>
+
+            {selectedStatusHospital && (
+              <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+                <p className="text-sm font-semibold text-slate-900">
+                  Bed Type Details for {selectedStatusHospital.name}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Clicked hospital drilldown: available, busy, and unavailable beds by type.
+                </p>
+
+                <div className="mt-2 overflow-x-auto">
+                  <table className="w-full min-w-[360px] text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+                        <th className="py-1.5 pr-2 font-semibold">Bed Type</th>
+                        <th className="py-1.5 pr-2 font-semibold">Available</th>
+                        <th className="py-1.5 pr-2 font-semibold">Busy</th>
+                        <th className="py-1.5 font-semibold">Unavailable</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedStatusHospital.bedInventory.map((bedType) => (
+                        <tr key={bedType.type} className="border-b border-slate-100 last:border-0">
+                          <td className="py-1.5 pr-2 font-medium text-slate-800">{bedType.type}</td>
+                          <td className="py-1.5 pr-2 text-emerald-700">{bedType.available}</td>
+                          <td className="py-1.5 pr-2 text-amber-700">{bedType.busy}</td>
+                          <td className="py-1.5 text-rose-700">{bedType.unavailable}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <div className="surface-card p-5">
+          <h2 className="mb-4 text-lg font-bold text-slate-900">Hospital Operations</h2>
+          <div className="stagger space-y-3">
+            {hospitals.map((hospital) => (
+              <div
+                key={hospital.id}
+                className="rounded-xl border border-slate-200/80 bg-white/80 p-4 transition hover:-translate-y-0.5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-slate-900">{hospital.name}</p>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                    {hospital.isOpen ? "Open" : "Closed"}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">{hospital.location}</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Beds: <span className="font-semibold text-slate-800">{hospital.bedsAvailable}</span> | Emergency: {" "}
+                  <span className="font-semibold text-slate-800">{hospital.emergencyStatus}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="surface-card p-5">
+          <h2 className="mb-4 text-lg font-bold text-slate-900">Recent Patients</h2>
+          <div className="stagger space-y-3">
+            {recentPatients.map((patient) => {
+              const hospital = hospitals.find((item) => item.id === patient.hospitalId);
+              return (
+                <div
+                  key={patient.id}
+                  className="rounded-xl border border-slate-200/80 bg-white/80 p-4"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-slate-900">{patient.name}</p>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${patientStatusClass(
+                        patient.status
+                      )}`}
+                    >
+                      {patient.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-600">{patient.diagnosis}</p>
+                  <p className="mt-1 text-sm text-slate-500">{hospital?.name ?? "Unknown Hospital"}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-export default Dashboard;
