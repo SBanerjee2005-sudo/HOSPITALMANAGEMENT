@@ -10,13 +10,19 @@ type Bill = {
 };
 
 const initialBills: Bill[] = [
-  { id: "INV001", patient: "John Smith", service: "Cardiology Consultation", date: "2026-03-25", amount: 1250, status: "Paid" },
-  { id: "INV002", patient: "Sarah Johnson", service: "Diabetes Treatment Package", date: "2026-04-01", amount: 3500, status: "Paid" },
-  { id: "INV003", patient: "Michael Brown", service: "Cardiac Surgery", date: "2026-03-30", amount: 15000, status: "Paid" },
-  { id: "INV004", patient: "Emily Davis", service: "General Checkup", date: "2026-03-22", amount: 450, status: "Paid" },
-  { id: "INV005", patient: "Robert Wilson", service: "Pneumonia Treatment", date: "2026-03-15", amount: 2800, status: "Paid" },
-  { id: "INV006", patient: "Lisa Anderson", service: "Neurological Consultation", date: "2026-04-03", amount: 680, status: "Pending" },
+  { id: "INV001", patient: "Rohan Mukherjee", service: "Cardiology Consultation", date: "2026-03-25", amount: 1250, status: "Paid" },
+  { id: "INV002", patient: "Priyanka Sen", service: "Diabetes Treatment Package", date: "2026-04-01", amount: 3500, status: "Paid" },
+  { id: "INV003", patient: "Arindam Chakraborty", service: "Cardiac Surgery", date: "2026-03-30", amount: 15000, status: "Paid" },
+  { id: "INV004", patient: "Madhumita Roy", service: "General Checkup", date: "2026-03-22", amount: 450, status: "Paid" },
+  { id: "INV005", patient: "Soumen Banerjee", service: "Pneumonia Treatment", date: "2026-03-15", amount: 2800, status: "Paid" },
+  { id: "INV006", patient: "Tanaya Ghosh", service: "Neurological Consultation", date: "2026-04-03", amount: 680, status: "Pending" },
 ];
+
+const inrCurrency = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+});
 
 export default function Billing() {
   const [bills, setBills] = useState(initialBills);
@@ -164,7 +170,7 @@ export default function Billing() {
             <span>{b.patient}</span>
             <span className="truncate">{b.service}</span>
             <span>{b.date}</span>
-            <span>${b.amount}</span>
+            <span>{inrCurrency.format(b.amount)}</span>
 
             <select
               value={b.status}
@@ -281,9 +287,9 @@ function Card({
 }: {
   title: string;
   value: number;
-  color: string;
+  color: "blue" | "green" | "yellow" | "red";
 }) {
-  const map: any = {
+  const map: Record<"blue" | "green" | "yellow" | "red", string> = {
     blue: "text-blue-600",
     green: "text-green-600",
     yellow: "text-yellow-600",
@@ -293,7 +299,7 @@ function Card({
   return (
     <div className="bg-white p-5 rounded-xl shadow border">
       <p className={`text-xl font-bold ${map[color]}`}>
-        ${value.toLocaleString()}
+        {inrCurrency.format(value)}
       </p>
       <p className="text-sm text-gray-500 mt-1">{title}</p>
     </div>

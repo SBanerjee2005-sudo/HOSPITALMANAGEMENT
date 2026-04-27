@@ -1,347 +1,375 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  adminPatients,
+  getHospitalNameById,
+  hospitals,
+  type AdminPatient,
+} from "../data";
 
-type Patient = {
+type PatientStatus = AdminPatient["status"];
+
+type PatientFormState = {
   id: string;
   name: string;
   age: number;
-  gender: string;
+  gender: AdminPatient["gender"];
   diagnosis: string;
-  status: string;
+  status: PatientStatus;
+  hospitalId: number;
 };
 
-const initialPatients: Patient[] = [
-  {
-    id: "P001",
-    name: "John Smith",
-    age: 45,
-    gender: "Male",
-    diagnosis: "Hypertension",
-    status: "In Treatment",
-  },
-  {
-    id: "P002",
-    name: "Sarah Johnson",
-    age: 32,
-    gender: "Female",
-    diagnosis: "Diabetes Type 2",
-    status: "Admitted",
-  },
-];
+const initialForm: PatientFormState = {
+  id: "",
+  name: "",
+  age: 0,
+  gender: "Male",
+  diagnosis: "",
+  status: "Admitted",
+  hospitalId: hospitals[0]?.id ?? 1,
+};
 
 export default function Patients() {
-  const [patients, setPatients] = useState(initialPatients);
-
+  const [patients, setPatients] = useState<AdminPatient[]>(adminPatients);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All Status");
-  const [genderFilter, setGenderFilter] = useState("All Genders");
+  const [statusFilter, setStatusFilter] = useState<PatientStatus | "All">("All");
+  const [genderFilter, setGenderFilter] = useState<AdminPatient["gender"] | "All">(
+    "All"
+  );
+  const [hospitalFilter, setHospitalFilter] = useState<number | "All">("All");
 
   const [showModal, setShowModal] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [form, setForm] = useState<PatientFormState>(initialForm);
 
-  const [form, setForm] = useState<Patient>({
-    id: "",
-    name: "",
-    age: 0,
-    gender: "Male",
-    diagnosis: "",
-    status: "Admitted",
-  });
+  const normalize = (value: string) => value.toLowerCase().trim();
 
-  const [customGender, setCustomGender] = useState("");
-
-  // 🔥 AUTO ID GENERATOR
   const generatePatientId = () => {
     if (patients.length === 0) return "P001";
+    const highest = patients.reduce((max, patient) => {
+      const numeric = Number(patient.id.replace("P", ""));
+      return Math.max(max, numeric);
+    }, 0);
 
-    const last = patients[patients.length - 1].id;
-    const num = parseInt(last.replace("P", "")) + 1;
-    return "P" + num.toString().padStart(3, "0");
+    return `P${String(highest + 1).padStart(3, "0")}`;
   };
 
-  const normalize = (v: string) => v.toLowerCase().trim();
-
-  const getInitials = (name: string) =>
-    name
+  const getInitials = (name: string) => {
+    return name
       .split(" ")
-      .map((n) => n[0])
-      .join("");
-
-  const statusStyle = (status: string) => {
-    if (status === "Admitted") return "bg-red-100 text-red-600";
-    if (status === "In Treatment") return "bg-yellow-100 text-yellow-700";
-    if (status === "Discharged") return "bg-green-100 text-green-600";
-    if (status === "Waiting") return "bg-blue-100 text-blue-600";
-    return "bg-gray-100 text-gray-600";
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
   };
 
-  const filtered = patients.filter((p) => {
+  const filteredPatients = patients.filter((patient) => {
     const matchesSearch =
-      normalize(p.name).includes(normalize(search)) ||
-      normalize(p.id).includes(normalize(search)) ||
-      normalize(p.diagnosis).includes(normalize(search));
+      normalize(patient.name).includes(normalize(search)) ||
+      normalize(patient.id).includes(normalize(search)) ||
+      normalize(patient.diagnosis).includes(normalize(search));
 
-    const matchesStatus =
-      statusFilter === "All Status" || p.status === statusFilter;
+    const matchesStatus = statusFilter === "All" || patient.status === statusFilter;
+    const matchesGender = genderFilter === "All" || patient.gender === genderFilter;
+    const matchesHospital =
+      hospitalFilter === "All" || patient.hospitalId === hospitalFilter;
 
-    const matchesGender =
-      genderFilter === "All Genders" ||
-      normalize(p.gender) === normalize(genderFilter);
-
-    return matchesSearch && matchesStatus && matchesGender;
+    return matchesSearch && matchesStatus && matchesGender && matchesHospital;
   });
 
-  const handleSave = () => {
-    if (!form.name) return;
+  const summary = useMemo(() => {
+    return {
+      total: patients.length,
+      admitted: patients.filter((patient) => patient.status === "Admitted").length,
+      treatment: patients.filter((patient) => patient.status === "In Treatment").length,
+      discharged: patients.filter((patient) => patient.status === "Discharged").length,
+    };
+  }, [patients]);
 
-    const finalGender =
-      form.gender === "Other"
-        ? customGender.trim() || "Other"
-        : form.gender;
+  const resetForm = () => {
+    setShowModal(false);
+    setEditIndex(null);
+    setForm(initialForm);
+  };
+
+  const handleSave = () => {
+    if (!form.name || !form.diagnosis) return;
 
     if (editIndex !== null) {
-      const copy = [...patients];
-      copy[editIndex] = { ...form, gender: finalGender };
-      setPatients(copy);
+      const updated = [...patients];
+      updated[editIndex] = { ...form, id: updated[editIndex].id };
+      setPatients(updated);
     } else {
-      const newPatient = {
+      const patient: AdminPatient = {
         ...form,
-        id: generatePatientId(), // 🔥 AUTO ID
-        gender: finalGender,
+        id: generatePatientId(),
       };
-
-      setPatients([...patients, newPatient]);
+      setPatients((prev) => [patient, ...prev]);
     }
 
     resetForm();
   };
 
-  const resetForm = () => {
-    setShowModal(false);
-    setEditIndex(null);
-    setCustomGender("");
-    setForm({
-      id: "",
-      name: "",
-      age: 0,
-      gender: "Male",
-      diagnosis: "",
-      status: "Admitted",
-    });
+  const handleDelete = (index: number) => {
+    setPatients((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
   };
 
-  const handleDelete = (i: number) =>
-    setPatients(patients.filter((_, idx) => idx !== i));
-
-  const handleEdit = (i: number) => {
-    setForm(patients[i]);
-    setEditIndex(i);
+  const handleEdit = (index: number) => {
+    const patient = patients[index];
+    setForm({ ...patient });
+    setEditIndex(index);
     setShowModal(true);
+  };
+
+  const patientStatusClass = (status: PatientStatus) => {
+    if (status === "Admitted") return "bg-rose-50 text-rose-700";
+    if (status === "In Treatment") return "bg-amber-50 text-amber-700";
+    if (status === "Discharged") return "bg-emerald-50 text-emerald-700";
+    return "bg-cyan-50 text-cyan-700";
   };
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Patients</h1>
-          <p className="text-gray-500 text-sm">
-            Manage and view all patient records
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">
+            Admin Patient Registry
           </p>
+          <h1 className="mt-2 text-3xl font-extrabold text-slate-900">Patients</h1>
+          <p className="text-slate-600">Centralized records across all Kolkata hospitals.</p>
         </div>
 
         <button
           onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+          className="rounded-xl bg-cyan-700 px-4 py-2.5 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-800"
         >
           + Add Patient
         </button>
       </div>
 
-      {/* FILTERS */}
-      <div className="bg-white p-4 rounded-xl shadow border flex gap-3">
+      <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="surface-card p-4">
+          <p className="text-sm text-slate-500">Total Patients</p>
+          <p className="text-2xl font-extrabold text-slate-900">{summary.total}</p>
+        </div>
+        <div className="surface-card p-4">
+          <p className="text-sm text-slate-500">Admitted</p>
+          <p className="text-2xl font-extrabold text-slate-900">{summary.admitted}</p>
+        </div>
+        <div className="surface-card p-4">
+          <p className="text-sm text-slate-500">In Treatment</p>
+          <p className="text-2xl font-extrabold text-slate-900">{summary.treatment}</p>
+        </div>
+        <div className="surface-card p-4">
+          <p className="text-sm text-slate-500">Discharged</p>
+          <p className="text-2xl font-extrabold text-slate-900">{summary.discharged}</p>
+        </div>
+      </div>
+
+      <div className="surface-card grid grid-cols-1 gap-3 p-4 md:grid-cols-5">
         <input
-          placeholder="Search by name, ID, or diagnosis..."
+          placeholder="Search by name, ID, diagnosis"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 border px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-400"
+          onChange={(event) => setSearch(event.target.value)}
+          className="md:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
         />
 
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border px-3 py-2 rounded-lg text-sm"
+          onChange={(event) => setStatusFilter(event.target.value as PatientStatus | "All")}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
         >
-          <option>All Status</option>
-          <option>Admitted</option>
-          <option>In Treatment</option>
-          <option>Discharged</option>
-          <option>Waiting</option>
+          <option value="All">All Status</option>
+          <option value="Admitted">Admitted</option>
+          <option value="In Treatment">In Treatment</option>
+          <option value="Discharged">Discharged</option>
+          <option value="Waiting">Waiting</option>
         </select>
 
         <select
           value={genderFilter}
-          onChange={(e) => setGenderFilter(e.target.value)}
-          className="border px-3 py-2 rounded-lg text-sm"
+          onChange={(event) =>
+            setGenderFilter(event.target.value as AdminPatient["gender"] | "All")
+          }
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
         >
-          <option>All Genders</option>
-          <option>Male</option>
-          <option>Female</option>
-          <option>Other</option>
+          <option value="All">All Genders</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <select
+          value={hospitalFilter}
+          onChange={(event) => {
+            const value = event.target.value;
+            setHospitalFilter(value === "All" ? "All" : Number(value));
+          }}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+        >
+          <option value="All">All Hospitals</option>
+          {hospitals.map((hospital) => (
+            <option key={hospital.id} value={hospital.id}>
+              {hospital.name}
+            </option>
+          ))}
         </select>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white rounded-xl shadow border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+      <div className="surface-card overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-6 py-3 text-left">ID</th>
-              <th className="px-6 py-3 text-left">Patient</th>
-              <th className="px-6 py-3 text-left">Age</th>
-              <th className="px-6 py-3 text-left">Gender</th>
-              <th className="px-6 py-3 text-left">Diagnosis</th>
-              <th className="px-6 py-3 text-left">Status</th>
-              <th className="px-6 py-3 text-left">Edit</th>
-              <th className="px-6 py-3 text-left">Delete</th>
+              <th className="px-5 py-3">ID</th>
+              <th className="px-5 py-3">Patient</th>
+              <th className="px-5 py-3">Hospital</th>
+              <th className="px-5 py-3">Diagnosis</th>
+              <th className="px-5 py-3">Status</th>
+              <th className="px-5 py-3">Actions</th>
             </tr>
           </thead>
-
           <tbody>
-            {filtered.map((p, i) => (
-              <tr key={i} className="border-t hover:bg-gray-50">
-                <td className="px-6 py-4 text-blue-600 font-medium">
-                  {p.id}
-                </td>
-
-                <td className="px-6 py-4">
+            {filteredPatients.map((patient, index) => (
+              <tr key={patient.id} className="border-t border-slate-100 transition hover:bg-slate-50/70">
+                <td className="px-5 py-4 font-semibold text-cyan-700">{patient.id}</td>
+                <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">
-                      {getInitials(p.name)}
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-600 text-xs font-semibold text-white">
+                      {getInitials(patient.name)}
                     </div>
-                    {p.name}
+                    <div>
+                      <p className="font-semibold text-slate-900">{patient.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {patient.age} yrs, {patient.gender}
+                      </p>
+                    </div>
                   </div>
                 </td>
-
-                <td className="px-6 py-4">{p.age}</td>
-                <td className="px-6 py-4 capitalize">{p.gender}</td>
-                <td className="px-6 py-4">{p.diagnosis}</td>
-
-                <td className="px-6 py-4">
+                <td className="px-5 py-4 text-slate-600">
+                  {getHospitalNameById(patient.hospitalId)}
+                </td>
+                <td className="px-5 py-4 text-slate-600">{patient.diagnosis}</td>
+                <td className="px-5 py-4">
                   <span
-                    className={`inline-block px-3 py-1 text-xs rounded-full ${statusStyle(
-                      p.status
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${patientStatusClass(
+                      patient.status
                     )}`}
                   >
-                    {p.status}
+                    {patient.status}
                   </span>
                 </td>
-
-                <td className="px-6 py-4">
-                  <button
-                    onClick={() => handleEdit(i)}
-                    className="text-blue-600"
-                  >
-                    Edit
-                  </button>
-                </td>
-
-                <td className="px-6 py-4">
-                  <button
-                    onClick={() => handleDelete(i)}
-                    className="text-red-500"
-                  >
-                    Delete
-                  </button>
+                <td className="px-5 py-4">
+                  <div className="flex gap-3 text-sm font-semibold">
+                    <button onClick={() => handleEdit(index)} className="text-cyan-700">
+                      Edit
+                    </button>
+                    <button onClick={() => handleDelete(index)} className="text-rose-600">
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+
+        {filteredPatients.length === 0 && (
+          <div className="p-5 text-sm text-slate-500">No patients match the current filters.</div>
+        )}
       </div>
 
-      {/* MODAL */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[400px] space-y-4">
-            <h2 className="text-lg font-semibold">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/45 p-4">
+          <div className="surface-card w-full max-w-md p-6">
+            <h2 className="mb-4 text-lg font-bold text-slate-900">
               {editIndex !== null ? "Edit Patient" : "Add Patient"}
             </h2>
 
-            <input
-              placeholder="Name"
-              value={form.name}
-              onChange={(e) =>
-                setForm({ ...form, name: e.target.value })
-              }
-              className="border p-2 w-full rounded"
-            />
-
-            <input
-              type="number"
-              placeholder="Age"
-              value={form.age || ""}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  age: Number(e.target.value),
-                })
-              }
-              className="border p-2 w-full rounded"
-            />
-
-            <input
-              placeholder="Diagnosis"
-              value={form.diagnosis}
-              onChange={(e) =>
-                setForm({ ...form, diagnosis: e.target.value })
-              }
-              className="border p-2 w-full rounded"
-            />
-
-            <select
-              value={form.gender}
-              onChange={(e) =>
-                setForm({ ...form, gender: e.target.value })
-              }
-              className="border p-2 w-full rounded"
-            >
-              <option>Male</option>
-              <option>Female</option>
-              <option>Other</option>
-            </select>
-
-            {form.gender === "Other" && (
+            <div className="space-y-3">
               <input
-                placeholder="Enter gender"
-                value={customGender}
-                onChange={(e) => setCustomGender(e.target.value)}
-                className="border p-2 w-full rounded"
+                placeholder="Name"
+                value={form.name}
+                onChange={(event) => setForm({ ...form, name: event.target.value })}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
               />
-            )}
 
-            <select
-              value={form.status}
-              onChange={(e) =>
-                setForm({ ...form, status: e.target.value })
-              }
-              className="border p-2 w-full rounded"
-            >
-              <option>Admitted</option>
-              <option>In Treatment</option>
-              <option>Discharged</option>
-              <option>Waiting</option>
-            </select>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  placeholder="Age"
+                  value={form.age || ""}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      age: Number(event.target.value),
+                    })
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+                />
 
-            <div className="flex justify-end gap-2">
-              <button onClick={resetForm} className="border px-3 py-1">
+                <select
+                  value={form.gender}
+                  onChange={(event) =>
+                    setForm({ ...form, gender: event.target.value as AdminPatient["gender"] })
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <input
+                placeholder="Diagnosis"
+                value={form.diagnosis}
+                onChange={(event) =>
+                  setForm({ ...form, diagnosis: event.target.value })
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <select
+                  value={form.status}
+                  onChange={(event) =>
+                    setForm({ ...form, status: event.target.value as PatientStatus })
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+                >
+                  <option value="Admitted">Admitted</option>
+                  <option value="In Treatment">In Treatment</option>
+                  <option value="Discharged">Discharged</option>
+                  <option value="Waiting">Waiting</option>
+                </select>
+
+                <select
+                  value={form.hospitalId}
+                  onChange={(event) =>
+                    setForm({ ...form, hospitalId: Number(event.target.value) })
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+                >
+                  {hospitals.map((hospital) => (
+                    <option key={hospital.id} value={hospital.id}>
+                      {hospital.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={resetForm}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+              >
                 Cancel
               </button>
-
               <button
                 onClick={handleSave}
-                className="bg-blue-600 text-white px-3 py-1"
+                className="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800"
               >
-                Save
+                Save Patient
               </button>
             </div>
           </div>

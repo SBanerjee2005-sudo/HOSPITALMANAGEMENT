@@ -1,35 +1,83 @@
-import { useState, useEffect } from "react";
+import { useState, type ChangeEvent } from "react";
+
+type Profile = {
+  name: string;
+  email: string;
+  phone: string;
+  avatar: string;
+};
+
+type Hospital = {
+  name: string;
+  location: string;
+  gst: string;
+};
+
+type Notifications = {
+  email: boolean;
+  appointment: boolean;
+  patient: boolean;
+  billing: boolean;
+};
+
+type PasswordState = {
+  current: string;
+  new: string;
+  confirm: string;
+};
+
+type Privacy = {
+  logs: boolean;
+  analytics: boolean;
+};
+
+const loadStored = <T,>(key: string, fallback: T): T => {
+  const raw = localStorage.getItem(key);
+  if (!raw) return fallback;
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+};
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
 
   // ================= PROFILE =================
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<Profile>(() =>
+    loadStored<Profile>("profile", {
     name: "Swarnavo Sen",
     email: "swarnavosen@gmail.com",
     phone: "+91 98765 43210",
     avatar: "",
-  });
+    })
+  );
   const [profileMsg, setProfileMsg] = useState("");
 
   // ================= HOSPITAL =================
-  const [hospital, setHospital] = useState({
-    name: "MediCare Hospital",
+  const [hospital, setHospital] = useState<Hospital>(() =>
+    loadStored<Hospital>("hospital", {
+    name: "Medisync Hospital",
     location: "Kolkata, India",
     gst: "22ABCDE1234F1Z5",
-  });
+    })
+  );
   const [hospitalMsg, setHospitalMsg] = useState("");
 
   // ================= NOTIFICATIONS =================
-  const [notifications, setNotifications] = useState({
+  const [notifications, setNotifications] = useState<Notifications>(() =>
+    loadStored<Notifications>("notifications", {
     email: true,
     appointment: true,
     patient: true,
     billing: true,
-  });
+    })
+  );
 
   // ================= SECURITY =================
-  const [password, setPassword] = useState({
+  const [password, setPassword] = useState<PasswordState>({
     current: "",
     new: "",
     confirm: "",
@@ -42,23 +90,12 @@ export default function Settings() {
   const [region, setRegion] = useState("India");
 
   // ================= PRIVACY =================
-  const [privacy, setPrivacy] = useState({
+  const [privacy, setPrivacy] = useState<Privacy>(() =>
+    loadStored<Privacy>("privacy", {
     logs: true,
     analytics: false,
-  });
-
-  // ================= LOAD FROM STORAGE =================
-  useEffect(() => {
-    const p = localStorage.getItem("profile");
-    const h = localStorage.getItem("hospital");
-    const n = localStorage.getItem("notifications");
-    const pr = localStorage.getItem("privacy");
-
-    if (p) setProfile(JSON.parse(p));
-    if (h) setHospital(JSON.parse(h));
-    if (n) setNotifications(JSON.parse(n));
-    if (pr) setPrivacy(JSON.parse(pr));
-  }, []);
+    })
+  );
 
   // ================= SAVE =================
   const saveProfile = () => {
@@ -93,8 +130,8 @@ export default function Settings() {
   };
 
   // ================= IMAGE =================
-  const handleImage = (e: any) => {
-    const file = e.target.files[0];
+  const handleImage = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
@@ -244,17 +281,17 @@ export default function Settings() {
 
           {/* NOTIFICATIONS */}
           {activeTab === "notifications" &&
-            Object.keys(notifications).map((key: any) => (
+            (Object.keys(notifications) as Array<keyof Notifications>).map((key) => (
               <div key={key} className="flex justify-between">
                 <span>{key}</span>
                 <input
                   type="checkbox"
                   checked={notifications[key]}
                   onChange={() =>
-                    setNotifications({
-                      ...notifications,
-                      [key]: !notifications[key],
-                    })
+                    setNotifications((prev) => ({
+                      ...prev,
+                      [key]: !prev[key],
+                    }))
                   }
                 />
               </div>
