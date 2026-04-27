@@ -1,130 +1,380 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  adminPatients,
+  getHospitalNameById,
+  hospitals,
+  type AdminPatient,
+} from "../data";
 
-type Patient = {
-  id: number;
+type PatientStatus = AdminPatient["status"];
+
+type PatientFormState = {
+  id: string;
   name: string;
   age: number;
+  gender: AdminPatient["gender"];
+  diagnosis: string;
+  status: PatientStatus;
+  hospitalId: number;
+};
+
+const initialForm: PatientFormState = {
+  id: "",
+  name: "",
+  age: 0,
+  gender: "Male",
+  diagnosis: "",
+  status: "Admitted",
+  hospitalId: hospitals[0]?.id ?? 1,
 };
 
 export default function Patients() {
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("");
+  const [patients, setPatients] = useState<AdminPatient[]>(adminPatients);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<PatientStatus | "All">("All");
+  const [genderFilter, setGenderFilter] = useState<AdminPatient["gender"] | "All">(
+    "All"
+  );
+  const [hospitalFilter, setHospitalFilter] = useState<number | "All">("All");
 
-  const fetchPatients = () => {
-    fetch("http://127.0.0.1:8000/patients")
-      .then((res) => res.json())
-      .then((data) => setPatients(data))
-      .catch((err) => console.log(err));
+  const [showModal, setShowModal] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [form, setForm] = useState<PatientFormState>(initialForm);
+
+  const normalize = (value: string) => value.toLowerCase().trim();
+
+  const generatePatientId = () => {
+    if (patients.length === 0) return "P001";
+    const highest = patients.reduce((max, patient) => {
+      const numeric = Number(patient.id.replace("P", ""));
+      return Math.max(max, numeric);
+    }, 0);
+
+    return `P${String(highest + 1).padStart(3, "0")}`;
   };
 
-  useEffect(() => {
-    fetchPatients();
-  }, []);
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  };
 
-  const addPatient = async () => {
-    if (!name || !age) {
-      alert("Please enter both name and age");
-      return;
-    }
+  const filteredPatients = patients.filter((patient) => {
+    const matchesSearch =
+      normalize(patient.name).includes(normalize(search)) ||
+      normalize(patient.id).includes(normalize(search)) ||
+      normalize(patient.diagnosis).includes(normalize(search));
 
-    const newPatient = {
-      id: Date.now(),
-      name: name,
-      age: Number(age),
+    const matchesStatus = statusFilter === "All" || patient.status === statusFilter;
+    const matchesGender = genderFilter === "All" || patient.gender === genderFilter;
+    const matchesHospital =
+      hospitalFilter === "All" || patient.hospitalId === hospitalFilter;
+
+    return matchesSearch && matchesStatus && matchesGender && matchesHospital;
+  });
+
+  const summary = useMemo(() => {
+    return {
+      total: patients.length,
+      admitted: patients.filter((patient) => patient.status === "Admitted").length,
+      treatment: patients.filter((patient) => patient.status === "In Treatment").length,
+      discharged: patients.filter((patient) => patient.status === "Discharged").length,
     };
+  }, [patients]);
 
-    try {
-      const response = await fetch("http://127.0.0.1:8000/patients", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newPatient),
-      });
-
-      const data = await response.json();
-      console.log(data);
-
-      setName("");
-      setAge("");
-      fetchPatients();
-    } catch (error) {
-      console.log("Error adding patient:", error);
-    }
+  const resetForm = () => {
+    setShowModal(false);
+    setEditIndex(null);
+    setForm(initialForm);
   };
 
-  const deletePatient = async (id: number) => {
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/patients/${id}`, {
-        method: "DELETE",
-      });
+  const handleSave = () => {
+    if (!form.name || !form.diagnosis) return;
 
-      const data = await response.json();
-      console.log(data);
-
-      fetchPatients();
-    } catch (error) {
-      console.log("Error deleting patient:", error);
+    if (editIndex !== null) {
+      const updated = [...patients];
+      updated[editIndex] = { ...form, id: updated[editIndex].id };
+      setPatients(updated);
+    } else {
+      const patient: AdminPatient = {
+        ...form,
+        id: generatePatientId(),
+      };
+      setPatients((prev) => [patient, ...prev]);
     }
+
+    resetForm();
+  };
+
+  const handleDelete = (index: number) => {
+    setPatients((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
+  };
+
+  const handleEdit = (index: number) => {
+    const patient = patients[index];
+    setForm({ ...patient });
+    setEditIndex(index);
+    setShowModal(true);
+  };
+
+  const patientStatusClass = (status: PatientStatus) => {
+    if (status === "Admitted") return "bg-rose-50 text-rose-700";
+    if (status === "In Treatment") return "bg-amber-50 text-amber-700";
+    if (status === "Discharged") return "bg-emerald-50 text-emerald-700";
+    return "bg-cyan-50 text-cyan-700";
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-4">Patients</h1>
-
-      {/* Add Patient Form */}
-      <div className="bg-white rounded-xl shadow p-4 mb-6 flex gap-4">
-        <input
-          type="text"
-          placeholder="Enter patient name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="border rounded-lg px-4 py-2 w-full"
-        />
-
-        <input
-          type="number"
-          placeholder="Enter age"
-          value={age}
-          onChange={(e) => setAge(e.target.value)}
-          className="border rounded-lg px-4 py-2 w-full"
-        />
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">
+            Admin Patient Registry
+          </p>
+          <h1 className="mt-2 text-3xl font-extrabold text-slate-900">Patients</h1>
+          <p className="text-slate-600">Centralized records across all Kolkata hospitals.</p>
+        </div>
 
         <button
-          onClick={addPatient}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          onClick={() => setShowModal(true)}
+          className="rounded-xl bg-cyan-700 px-4 py-2.5 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-cyan-800"
         >
-          Add Patient
+          + Add Patient
         </button>
       </div>
 
-      {/* Patients Table */}
-      <div className="bg-white rounded-xl shadow overflow-hidden">
-        <div className="grid grid-cols-4 px-6 py-3 text-sm font-semibold text-gray-500 border-b">
-          <span>Name</span>
-          <span>Age</span>
-          <span>Disease</span>
-          <span>Action</span>
+      <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="surface-card p-4">
+          <p className="text-sm text-slate-500">Total Patients</p>
+          <p className="text-2xl font-extrabold text-slate-900">{summary.total}</p>
         </div>
-
-        {patients.map((p) => (
-          <div
-            key={p.id}
-            className="grid grid-cols-4 px-6 py-4 text-sm border-b border-gray-200/70 hover:bg-gray-50 transition"
-          >
-            <span className="font-medium text-gray-800">{p.name}</span>
-            <span className="text-gray-600">{p.age}</span>
-            <span className="text-gray-600">N/A</span>
-            <button
-              onClick={() => deletePatient(p.id)}
-              className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 w-fit"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
+        <div className="surface-card p-4">
+          <p className="text-sm text-slate-500">Admitted</p>
+          <p className="text-2xl font-extrabold text-slate-900">{summary.admitted}</p>
+        </div>
+        <div className="surface-card p-4">
+          <p className="text-sm text-slate-500">In Treatment</p>
+          <p className="text-2xl font-extrabold text-slate-900">{summary.treatment}</p>
+        </div>
+        <div className="surface-card p-4">
+          <p className="text-sm text-slate-500">Discharged</p>
+          <p className="text-2xl font-extrabold text-slate-900">{summary.discharged}</p>
+        </div>
       </div>
+
+      <div className="surface-card grid grid-cols-1 gap-3 p-4 md:grid-cols-5">
+        <input
+          placeholder="Search by name, ID, diagnosis"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className="md:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+        />
+
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value as PatientStatus | "All")}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+        >
+          <option value="All">All Status</option>
+          <option value="Admitted">Admitted</option>
+          <option value="In Treatment">In Treatment</option>
+          <option value="Discharged">Discharged</option>
+          <option value="Waiting">Waiting</option>
+        </select>
+
+        <select
+          value={genderFilter}
+          onChange={(event) =>
+            setGenderFilter(event.target.value as AdminPatient["gender"] | "All")
+          }
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+        >
+          <option value="All">All Genders</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <select
+          value={hospitalFilter}
+          onChange={(event) => {
+            const value = event.target.value;
+            setHospitalFilter(value === "All" ? "All" : Number(value));
+          }}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+        >
+          <option value="All">All Hospitals</option>
+          {hospitals.map((hospital) => (
+            <option key={hospital.id} value={hospital.id}>
+              {hospital.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="surface-card overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th className="px-5 py-3">ID</th>
+              <th className="px-5 py-3">Patient</th>
+              <th className="px-5 py-3">Hospital</th>
+              <th className="px-5 py-3">Diagnosis</th>
+              <th className="px-5 py-3">Status</th>
+              <th className="px-5 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredPatients.map((patient, index) => (
+              <tr key={patient.id} className="border-t border-slate-100 transition hover:bg-slate-50/70">
+                <td className="px-5 py-4 font-semibold text-cyan-700">{patient.id}</td>
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-600 text-xs font-semibold text-white">
+                      {getInitials(patient.name)}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-900">{patient.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {patient.age} yrs, {patient.gender}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-5 py-4 text-slate-600">
+                  {getHospitalNameById(patient.hospitalId)}
+                </td>
+                <td className="px-5 py-4 text-slate-600">{patient.diagnosis}</td>
+                <td className="px-5 py-4">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${patientStatusClass(
+                      patient.status
+                    )}`}
+                  >
+                    {patient.status}
+                  </span>
+                </td>
+                <td className="px-5 py-4">
+                  <div className="flex gap-3 text-sm font-semibold">
+                    <button onClick={() => handleEdit(index)} className="text-cyan-700">
+                      Edit
+                    </button>
+                    <button onClick={() => handleDelete(index)} className="text-rose-600">
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {filteredPatients.length === 0 && (
+          <div className="p-5 text-sm text-slate-500">No patients match the current filters.</div>
+        )}
+      </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/45 p-4">
+          <div className="surface-card w-full max-w-md p-6">
+            <h2 className="mb-4 text-lg font-bold text-slate-900">
+              {editIndex !== null ? "Edit Patient" : "Add Patient"}
+            </h2>
+
+            <div className="space-y-3">
+              <input
+                placeholder="Name"
+                value={form.name}
+                onChange={(event) => setForm({ ...form, name: event.target.value })}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  placeholder="Age"
+                  value={form.age || ""}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      age: Number(event.target.value),
+                    })
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+                />
+
+                <select
+                  value={form.gender}
+                  onChange={(event) =>
+                    setForm({ ...form, gender: event.target.value as AdminPatient["gender"] })
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <input
+                placeholder="Diagnosis"
+                value={form.diagnosis}
+                onChange={(event) =>
+                  setForm({ ...form, diagnosis: event.target.value })
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <select
+                  value={form.status}
+                  onChange={(event) =>
+                    setForm({ ...form, status: event.target.value as PatientStatus })
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+                >
+                  <option value="Admitted">Admitted</option>
+                  <option value="In Treatment">In Treatment</option>
+                  <option value="Discharged">Discharged</option>
+                  <option value="Waiting">Waiting</option>
+                </select>
+
+                <select
+                  value={form.hospitalId}
+                  onChange={(event) =>
+                    setForm({ ...form, hospitalId: Number(event.target.value) })
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+                >
+                  {hospitals.map((hospital) => (
+                    <option key={hospital.id} value={hospital.id}>
+                      {hospital.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={resetForm}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800"
+              >
+                Save Patient
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
