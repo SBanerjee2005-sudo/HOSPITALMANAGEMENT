@@ -1,10 +1,10 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
-from database import SessionLocal, Hospital
+from database import SessionLocal, Hospital, Patient, Doctor, Appointment, Billing
 
 app = FastAPI()
 
@@ -43,19 +43,208 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# ---------------- REQUEST MODEL ----------------
+# ================== PYDANTIC MODELS ==================
+
+# Hospital Update Model
 class HospitalUpdate(BaseModel):
     icu_beds: int
     general_beds: int
     doctors_available: int
     ambulances: int
 
-# ---------------- HOME ROUTE ----------------
+# Patient Model
+class PatientCreate(BaseModel):
+    name: str
+    age: int
+
+class PatientResponse(BaseModel):
+    id: int
+    name: str
+    age: int
+    
+    class Config:
+        from_attributes = True
+
+# Doctor Model
+class DoctorCreate(BaseModel):
+    name: str
+    specialization: str
+
+class DoctorResponse(BaseModel):
+    id: int
+    name: str
+    specialization: str
+    
+    class Config:
+        from_attributes = True
+
+# Appointment Model
+class AppointmentCreate(BaseModel):
+    patient: str
+    doctor: str
+    date: Optional[str] = None
+    time: Optional[str] = None
+    status: Optional[str] = "scheduled"
+
+class AppointmentResponse(BaseModel):
+    id: int
+    patient: str
+    doctor: str
+    date: Optional[str] = None
+    time: Optional[str] = None
+    status: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+# Billing Model
+class BillingCreate(BaseModel):
+    patient: str
+    amount: int
+
+class BillingResponse(BaseModel):
+    id: int
+    patient: str
+    amount: int
+    
+    class Config:
+        from_attributes = True
+
+# ================== HOME ROUTE ==================
 @app.get("/")
 def home():
     return {"message": "Backend is running successfully"}
 
-# ---------------- GET ALL HOSPITALS ----------------
+# ================== PATIENTS ENDPOINTS ==================
+@app.get("/patients", response_model=List[PatientResponse])
+def get_patients(db: Session = Depends(get_db)):
+    """Get all patients"""
+    patients = db.query(Patient).all()
+    return patients
+
+@app.post("/patients", response_model=PatientResponse)
+def create_patient(patient: PatientCreate, db: Session = Depends(get_db)):
+    """Create a new patient"""
+    new_patient = Patient(name=patient.name, age=patient.age)
+    db.add(new_patient)
+    db.commit()
+    db.refresh(new_patient)
+    return new_patient
+
+@app.delete("/patients/{patient_id}")
+def delete_patient(patient_id: int, db: Session = Depends(get_db)):
+    """Delete a patient by ID"""
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        return {"message": "Patient not found"}
+    db.delete(patient)
+    db.commit()
+    return {"message": "Patient deleted successfully"}
+
+# ================== DOCTORS ENDPOINTS ==================
+@app.get("/doctors", response_model=List[DoctorResponse])
+def get_doctors(db: Session = Depends(get_db)):
+    """Get all doctors"""
+    doctors = db.query(Doctor).all()
+    return doctors
+
+@app.post("/doctors", response_model=DoctorResponse)
+def create_doctor(doctor: DoctorCreate, db: Session = Depends(get_db)):
+    """Create a new doctor"""
+    new_doctor = Doctor(name=doctor.name, specialization=doctor.specialization)
+    db.add(new_doctor)
+    db.commit()
+    db.refresh(new_doctor)
+    return new_doctor
+
+@app.delete("/doctors/{doctor_id}")
+def delete_doctor(doctor_id: int, db: Session = Depends(get_db)):
+    """Delete a doctor by ID"""
+    doctor = db.query(Doctor).filter(Doctor.id == doctor_id).first()
+    if not doctor:
+        return {"message": "Doctor not found"}
+    db.delete(doctor)
+    db.commit()
+    return {"message": "Doctor deleted successfully"}
+
+# ================== APPOINTMENTS ENDPOINTS ==================
+@app.get("/appointments", response_model=List[AppointmentResponse])
+def get_appointments(db: Session = Depends(get_db)):
+    """Get all appointments"""
+    appointments = db.query(Appointment).all()
+    return appointments
+
+@app.post("/appointments", response_model=AppointmentResponse)
+def create_appointment(appointment: AppointmentCreate, db: Session = Depends(get_db)):
+    """Create a new appointment"""
+    new_appointment = Appointment(
+        patient=appointment.patient,
+        doctor=appointment.doctor,
+        date=appointment.date,
+        time=appointment.time,
+        status=appointment.status
+    )
+    db.add(new_appointment)
+    db.commit()
+    db.refresh(new_appointment)
+    return new_appointment
+
+@app.delete("/appointments/{appointment_id}")
+def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
+    """Delete an appointment by ID"""
+    appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not appointment:
+        return {"message": "Appointment not found"}
+    db.delete(appointment)
+    db.commit()
+    return {"message": "Appointment deleted successfully"}
+
+# ================== BILLING ENDPOINTS ==================
+@app.get("/billing", response_model=List[BillingResponse])
+def get_billing(db: Session = Depends(get_db)):
+    """Get all billing records"""
+    billing = db.query(Billing).all()
+    return billing
+
+@app.post("/billing", response_model=BillingResponse)
+def create_billing(bill: BillingCreate, db: Session = Depends(get_db)):
+    """Create a new billing record"""
+    new_billing = Billing(patient=bill.patient, amount=bill.amount)
+    db.add(new_billing)
+    db.commit()
+    db.refresh(new_billing)
+    return new_billing
+
+@app.delete("/billing/{billing_id}")
+def delete_billing(billing_id: int, db: Session = Depends(get_db)):
+    """Delete a billing record by ID"""
+    billing = db.query(Billing).filter(Billing.id == billing_id).first()
+    if not billing:
+        return {"message": "Billing record not found"}
+    db.delete(billing)
+    db.commit()
+    return {"message": "Billing record deleted successfully"}
+
+# ================== REPORTS ENDPOINT ==================
+@app.get("/reports")
+def get_reports(db: Session = Depends(get_db)):
+    """Get system reports with statistics"""
+    total_patients = db.query(Patient).count()
+    total_doctors = db.query(Doctor).count()
+    total_appointments = db.query(Appointment).count()
+    
+    # Calculate total amount from billing
+    billing_records = db.query(Billing).all()
+    total_amount = sum(bill.amount for bill in billing_records)
+    
+    return {
+        "total_patients": total_patients,
+        "total_doctors": total_doctors,
+        "total_appointments": total_appointments,
+        "total_revenue": total_amount
+    }
+
+# ================== HOSPITALS ENDPOINTS ==================
 @app.get("/hospitals")
 def get_hospitals():
     return [
@@ -711,11 +900,11 @@ def get_hospitals():
             "rating": 3.8
         }
     ]
-    
 
-# ---------------- UPDATE HOSPITAL ----------------
+# ================== UPDATE HOSPITAL ==================
 @app.put("/hospitals/{hospital_id}")
 async def update_hospital(hospital_id: int, data: HospitalUpdate, db: Session = Depends(get_db)):
+    """Update a hospital by ID"""
     hospital = db.query(Hospital).filter(Hospital.id == hospital_id).first()
 
     if not hospital:
@@ -733,9 +922,10 @@ async def update_hospital(hospital_id: int, data: HospitalUpdate, db: Session = 
 
     return {"message": "Hospital updated successfully"}
 
-# ---------------- WEBSOCKET ----------------
+# ================== WEBSOCKET ==================
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time updates"""
     await manager.connect(websocket)
     try:
         while True:
