@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { getUser } from "../utils/auth";
+import { getUser, type UserRole } from "../utils/auth";
 import type { JSX } from "react";
 
 export default function ProtectedRoute({
@@ -7,7 +7,7 @@ export default function ProtectedRoute({
   role,
 }: {
   children: JSX.Element;
-  role: string;
+  role: UserRole;
 }) {
   const user = getUser();
 
