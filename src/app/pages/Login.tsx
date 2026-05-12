@@ -1,12 +1,18 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { LockKeyhole, Stethoscope, ShieldCheck } from "lucide-react";
-import { loginUser } from "../utils/auth";
+import {
+  getDemoCredentials,
+  getRoleHomePath,
+  loginUser,
+  type UserRole,
+  validateDemoCredential,
+} from "../utils/auth";
 
 export default function Login() {
   const navigate = useNavigate();
 
-  const [role, setRole] = useState("admin");
+  const [role, setRole] = useState<UserRole>("admin");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,34 +26,40 @@ export default function Login() {
       return;
     }
 
-    // 🔐 SIMPLE DEMO AUTH (you can change later)
-    if (role === "admin") {
-      if (username === "admin" && password === "123") {
-        loginUser({ username, role: "admin" });
-        navigate("/admin");
-      } else {
-        setError("Invalid admin credentials");
-      }
-    } else {
-      if (username === "patient" && password === "123") {
-        loginUser({ username, role: "patient" });
-        navigate("/patient-dashboard");
-      } else {
-        setError("Invalid patient credentials");
-      }
+    const authUser = validateDemoCredential(role, username, password);
+
+    if (!authUser) {
+      setError("Invalid credentials for selected role");
+      return;
     }
+
+    loginUser(authUser);
+    navigate(getRoleHomePath(authUser.role));
   };
 
+  const demoRows = getDemoCredentials();
+
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+    <div className="page-enter relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
       <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-[0_30px_80px_-40px_rgba(2,23,54,0.55)] backdrop-blur-md lg:grid-cols-[1.05fr_1fr] soft-pop">
         <section className="relative hidden p-10 lg:block">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_15%,#cffafe_0%,#ecfeff_35%,#ffffff_100%)]" />
           <div className="relative z-10">
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-700/80">Medisync Suite</p>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight text-slate-900">
+            <div className="mt-8 flex items-center gap-4">
+              <div className="h-16 w-16 rounded-2xl border border-cyan-100 bg-white/80 p-3 shadow-[0_12px_30px_-18px_rgba(14,116,144,0.55)]">
+                <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-xl font-black text-white">
+                  M
+                </div>
+              </div>
+              <div>
+                <p className="text-3xl font-black tracking-tight text-slate-900">Medisync</p>
+                <p className="text-sm font-semibold text-slate-500">Hospital intelligence platform</p>
+              </div>
+            </div>
+            <p className="mt-4 text-lg font-semibold text-slate-600">
               Secure clinical workspace for hospital teams and patients.
-            </h1>
+            </p>
 
             <div className="mt-10 space-y-4">
               <div className="surface-card flex items-start gap-3 p-4">
@@ -79,12 +91,14 @@ export default function Login() {
             <label className="block text-sm font-semibold text-slate-700">Role</label>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value)}
+              onChange={(e) => setRole(e.target.value as UserRole)}
               aria-label="Select login role"
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
             >
               <option value="admin">Admin</option>
               <option value="patient">Patient</option>
+              <option value="hospital_staff">Hospital Staff</option>
+              <option value="doctor">Doctor</option>
             </select>
 
             <label className="block text-sm font-semibold text-slate-700">Username</label>
@@ -120,9 +134,12 @@ export default function Login() {
             </button>
 
             <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-              Demo credentials:
-              <div>Admin: admin / 123</div>
-              <div>Patient: patient / 123</div>
+              <p className="font-semibold text-slate-700">Demo credentials:</p>
+              {demoRows.map((row) => (
+                <p key={`${row.role}-${row.username}`}>
+                  {row.role}: {row.username} / {row.password}
+                </p>
+              ))}
             </div>
           </form>
         </section>
