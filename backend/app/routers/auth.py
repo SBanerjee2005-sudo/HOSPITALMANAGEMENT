@@ -8,20 +8,15 @@ from app.utils.security import hash_password, verify_password
 
 router = APIRouter()
 
-DEMO_USERS = {
-    "admin:123": {"username": "admin", "role": "admin"},
-    "patient:123": {"username": "patient", "role": "patient"},
-    "doctor:123": {"username": "doctor", "role": "doctor"},
-    "staff:123": {"username": "staff", "role": "staff"},
-}
+
 
 @router.post("/register", response_model=LoginResponse)
 def register(request: UserRegisterRequest, db: Session = Depends(get_db)):
     """Register a new user (handles patient, doctor, and hospital_staff roles)"""
-    if request.role not in ["patient", "doctor", "hospital_staff"]:
+    if request.role not in ["patient", "doctor", "hospital_staff", "admin"]:
         return LoginResponse(
             success=False,
-            message="Only Patient, Doctor, and Hospital Staff registrations are supported by the cloud database currently."
+            message="Only Patient, Doctor, Hospital Staff, and Admin registrations are supported by the cloud database."
         )
     
     # Check if username already exists in database
@@ -116,68 +111,33 @@ def register(request: UserRegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=LoginResponse)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
-    """Validate login credentials against demo dictionary or live database (for patients, doctors, and staff)"""
-    # If it's a patient, doctor, or staff, check the database first!
-    if request.role in ["patient", "doctor", "hospital_staff"]:
-        db_user = db.query(User).filter(
-            User.username.ilike(request.username), 
-            User.role == request.role
-        ).first()
-        
-        if db_user:
-            if verify_password(request.password, db_user.password_hash):
-                return LoginResponse(
-                    success=True,
-                    id=db_user.id,
-                    username=db_user.username,
-                    role=db_user.role,
-                    displayName=db_user.displayName,
-                    email=db_user.email,
-                    phone=db_user.phone,
-                    verification_status=db_user.verification_status,
-                    doctorId=db_user.doctorId,
-                    hospitalId=db_user.hospitalId,
-                    message="Login successful"
-                )
-            else:
-                return LoginResponse(
-                    success=False,
-                    message="Invalid password"
-                )
+    """Validate login credentials against live database"""
+    db_user = db.query(User).filter(
+        User.username.ilike(request.username), 
+        User.role == request.role
+    ).first()
     
-    # Fallback to local DEMO_USERS for other roles (and demo doctor/patient logins)
-    key = f"{request.username}:{request.password}"
-    if key in DEMO_USERS and DEMO_USERS[key]["role"] == request.role:
-        user = DEMO_USERS[key]
-        
-        # Default session metadata values for static local profiles
-        displayName = f"{request.role.capitalize()} User"
-        if request.role == "patient":
-            displayName = "Patient User"
-        elif request.role == "doctor":
-            displayName = "Dr. Amit Roy"
+    if db_user:
+        if verify_password(request.password, db_user.password_hash):
+            return LoginResponse(
+                success=True,
+                id=db_user.id,
+                username=db_user.username,
+                role=db_user.role,
+                displayName=db_user.displayName,
+                email=db_user.email,
+                phone=db_user.phone,
+                verification_status=db_user.verification_status,
+                doctorId=db_user.doctorId,
+                hospitalId=db_user.hospitalId,
+                message="Login successful"
+            )
+        else:
+            return LoginResponse(
+                success=False,
+                message="Invalid password"
+            )
             
-        email = "patient@gmail.com" if request.role == "patient" else f"{request.username}@medisync.com"
-        phone = "+91 98300 12345" if request.role == "patient" else "+91 90511 11000"
-        
-        # Default IDs
-        hospitalId = 1 if request.role in ["doctor", "staff"] else None
-        doctorId = 101 if request.role == "doctor" else None
-        
-        return LoginResponse(
-            success=True,
-            id=999,
-            username=user["username"],
-            role=user["role"],
-            displayName=displayName,
-            email=email,
-            phone=phone,
-            verification_status="APPROVED",
-            doctorId=doctorId,
-            hospitalId=hospitalId,
-            message="Login successful"
-        )
-    
     return LoginResponse(
         success=False,
         message="Invalid username, password, or role"

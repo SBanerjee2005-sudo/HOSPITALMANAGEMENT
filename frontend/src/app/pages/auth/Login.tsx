@@ -1,14 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import HospitalMap from "../../components/HospitalMap";
-import { 
-  LockKeyhole, 
-  User, 
-  ArrowRight, 
-  Hospital, 
-  AlertCircle, 
+import {
+  LockKeyhole,
+  User,
+  ArrowRight,
+  Hospital,
+  AlertCircle,
   CheckCircle2,
-  Lock,
   UserPlus,
   Mail,
   Phone,
@@ -16,12 +15,9 @@ import {
   Stethoscope
 } from "lucide-react";
 import {
-  getDemoCredentials,
   getRoleHomePath,
   loginUser,
-  registerUser,
   type UserRole,
-  validateDemoCredential,
 } from "../../utils/auth";
 import { hospitals } from "../../data";
 import { api } from "../../services/api";
@@ -30,7 +26,7 @@ export default function Login() {
   const navigate = useNavigate();
 
   const [isRegister, setIsRegister] = useState(false);
-  
+
   // Login State
   const [role, setRole] = useState<UserRole>("admin");
   const [username, setUsername] = useState("");
@@ -57,7 +53,7 @@ export default function Login() {
       return;
     }
 
-    if (role === "patient" || role === "doctor" || role === "hospital_staff") {
+    if (role === "patient" || role === "doctor" || role === "hospital_staff" || role === "admin") {
       try {
         const res = await api.post<{
           success: boolean;
@@ -103,16 +99,7 @@ export default function Login() {
       return;
     }
 
-    // Fallback to local demo credentials for non-patient roles
-    const authUser = validateDemoCredential(role, username, password);
 
-    if (!authUser) {
-      setError("Invalid credentials for the selected role");
-      return;
-    }
-
-    loginUser(authUser);
-    navigate(getRoleHomePath(authUser.role));
   };
 
   const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
@@ -130,7 +117,7 @@ export default function Login() {
       return;
     }
 
-    if (regRole === "patient" || regRole === "doctor" || regRole === "hospital_staff") {
+    if (regRole === "patient" || regRole === "doctor" || regRole === "hospital_staff" || regRole === "admin") {
       try {
         const res = await api.post<{
           success: boolean;
@@ -155,14 +142,14 @@ export default function Login() {
         setUsername(regUsername);
         setPassword(regPassword);
         setSuccess("Account created successfully! Please sign in below.");
-        
+
         // Reset register form
         setRegName("");
         setRegUsername("");
         setRegPassword("");
         setRegEmail("");
         setRegPhone("");
-        
+
         // Switch back to Login view
         setIsRegister(false);
       } catch (err: any) {
@@ -170,42 +157,8 @@ export default function Login() {
       }
       return;
     }
-
-    // Fallback to local storage register for other roles (admin)
-    const res = registerUser(
-      regRole,
-      regUsername,
-      regPassword,
-      regName,
-      undefined,
-      undefined,
-      regEmail || undefined,
-      regPhone || undefined
-    );
-
-    if (!res.success) {
-      setError(res.message);
-      return;
-    }
-
-    // Setup sign in details automatically
-    setRole(regRole);
-    setUsername(regUsername);
-    setPassword(regPassword);
-    setSuccess("Account created successfully! Please sign in below.");
-    
-    // Reset register form
-    setRegName("");
-    setRegUsername("");
-    setRegPassword("");
-    setRegEmail("");
-    setRegPhone("");
-    
-    // Switch back to Login view
-    setIsRegister(false);
   };
 
-  const demoRows = getDemoCredentials();
 
 
   return (
@@ -216,13 +169,13 @@ export default function Login() {
 
       {/* Main Login Card */}
       <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-[0_30px_80px_-40px_rgba(2,23,54,0.15)] backdrop-blur-md lg:grid-cols-[1.05fr_1fr] soft-pop relative z-10">
-        
+
         {/* Left Side Branding Area */}
         <section className="relative hidden p-10 lg:block overflow-hidden bg-[radial-gradient(circle_at_10%_15%,#cffafe_0%,#ecfeff_35%,#ffffff_100%)]">
           <div className="relative z-10 flex h-full flex-col justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-700/80">Medisync Suite</p>
-              
+
               <div className="mt-8 flex items-center gap-4">
                 <div className="h-16 w-16 rounded-2xl border border-cyan-100 bg-white/80 p-3 shadow-[0_12px_30px_-18px_rgba(14,116,144,0.55)]">
                   <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-xl font-black text-white">
@@ -234,7 +187,7 @@ export default function Login() {
                   <p className="text-sm font-semibold text-slate-500">Hospital intelligence platform</p>
                 </div>
               </div>
-              
+
               <p className="mt-6 text-lg font-semibold text-slate-600 leading-relaxed">
                 Secure workspace designed to unify hospital operators, doctors, staff, and patients.
               </p>
@@ -270,7 +223,7 @@ export default function Login() {
 
         {/* Right Side Interactive Form Area */}
         <section className="p-7 md:p-10 flex flex-col justify-center bg-white/90">
-          
+
           {/* Sign In vs Create Account Toggle Headers */}
           <div className="mb-8">
             <div className="flex border-b border-slate-100 pb-2 mb-6">
@@ -367,31 +320,9 @@ export default function Login() {
                 <ArrowRight size={16} />
               </button>
 
-              {/* Demo Credentials Drawer */}
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 mt-6">
-                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  <Lock size={12} className="text-cyan-700" />
-                  <span>Interactive Quick Access Credentials:</span>
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-slate-600 max-h-36 overflow-y-auto pr-1">
-                  {demoRows.map((row) => (
-                    <div 
-                      key={`${row.role}-${row.username}`}
-                      onClick={() => {
-                        setRole(row.role);
-                        setUsername(row.username);
-                        setPassword(row.password);
-                      }}
-                      className="cursor-pointer hover:bg-white p-1.5 rounded-lg border border-transparent hover:border-slate-200 transition font-medium"
-                    >
-                      <span className="capitalize font-bold text-cyan-800">{row.role}</span>: <span className="font-mono text-slate-900">{row.username}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </form>
           ) : (
-            
+
             // ================== CREATE ACCOUNT (REGISTER) FORM ==================
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
