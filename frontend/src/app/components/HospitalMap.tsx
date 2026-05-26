@@ -191,7 +191,7 @@ export default function HospitalMap() {
     };
 
     // Load Script dynamically
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBVBCnMAeLxXqpyg1yNJ5v2J8LBcqdY8i0";
+    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
     const scriptId = "google-maps-api-script";
     let script = document.getElementById(scriptId) as HTMLScriptElement;
 
@@ -288,7 +288,7 @@ export default function HospitalMap() {
         processedHospitals.forEach((h) => {
           const isSelected = selectedHospital?.id === h.id;
           const pinColor = h.bedsAvailable > 0 ? "#10b981" : "#ef4444";
-          
+
           const pin = new PinElement({
             background: pinColor,
             borderColor: "#ffffff",
@@ -469,8 +469,8 @@ export default function HospitalMap() {
                     if (map) map.panTo({ lat: hospital.lat, lng: hospital.lng });
                   }}
                   className={`p-4 rounded-xl border transition-all duration-300 cursor-pointer ${isSelected
-                      ? "bg-cyan-50/40 border-cyan-500 shadow-sm shadow-cyan-100 scale-[1.01]"
-                      : "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                    ? "bg-cyan-50/40 border-cyan-500 shadow-sm shadow-cyan-100 scale-[1.01]"
+                    : "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                     }`}
                 >
                   <div className="flex items-start justify-between gap-2">
