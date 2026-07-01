@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { CalendarCheck2, CircleAlert, DollarSign, HeartPulse, Stethoscope, Users, ShieldAlert, Loader2, UserCheck } from "lucide-react";
-import { getPatientsByHospital, getDoctorsByHospital, getAppointmentsByHospital, getStaffNotifications, getHospitalReportSummary } from "../../data";
+import { getHospitalReportSummary } from "../../data";
 
 import { useDashboardData } from "../../hooks/useDashboardData";
 ;
@@ -86,8 +86,7 @@ export default function StaffDashboard() {
   const doctors = allDoctors.filter(d => d.hospitalId === hospitalId);
   const appointments = allAppointments.filter(a => a.hospitalId === hospitalId);
   
-  // Use mock data for notifications and reports for now
-  const notifications = getStaffNotifications(hospitalId);
+  // Use mock data for reports for now
   const report = getHospitalReportSummary(hospitalId);
 
   const todayAppointments = appointments.filter((appointment) => isToday(appointment.date));
@@ -187,7 +186,7 @@ export default function StaffDashboard() {
 
       {/* Detailed Bed Inventory */}
       {(() => {
-        const admittedPatients = patients.filter(p => p.status === "Admitted" || p.status === "In Treatment" || p.status === "Emergency");
+        const admittedPatients = patients.filter(p => p.status === "Admitted" || p.status === "In Treatment");
         
         const icuCapacity = Math.max(1, Math.floor(totalBeds * 0.20));
         const generalCapacity = Math.max(1, Math.floor(totalBeds * 0.50));

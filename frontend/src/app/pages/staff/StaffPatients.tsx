@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { type AdminPatient, getMedicalRecordByPatientId } from "../../data";
+import { type AdminPatient } from "../../data";
 
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { getStaffHospitalId } from "../../utils/roleScope";
@@ -249,7 +249,7 @@ export default function StaffPatients() {
                     <option value="">-- Unassigned --</option>
                     {doctors.map(doc => (
                       <option key={doc.id} value={String(doc.id)}>
-                        {doc.name} ({doc.department || doc.specialization})
+                        {doc.name} ({doc.department})
                       </option>
                     ))}
                   </select>
