@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { getPatientsByHospital, type AppointmentStatus } from "../../data";
+import { useNavigate } from "react-router-dom";
+
+;
 import { getDoctorScope } from "../../utils/roleScope";
 import { api } from "../../services/api.ts";
 
 export default function DoctorAppointments() {
+
   const { doctorId, hospitalId } = getDoctorScope();
   const patients = getPatientsByHospital(hospitalId);
 

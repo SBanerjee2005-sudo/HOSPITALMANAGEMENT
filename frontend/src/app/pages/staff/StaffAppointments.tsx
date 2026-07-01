@@ -1,9 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
-import {
-  getDoctorsByHospital,
-  getPatientsByHospital,
-  type AppointmentStatus,
-} from "../../data";
+import { getDoctorsByHospital, getPatientsByHospital, type AppointmentStatus } from "../../data";
+
+;
 import { getStaffHospitalId } from "../../utils/roleScope";
 import { api } from "../../services/api.ts";
 
@@ -33,6 +31,7 @@ const appointmentActionStatus: Record<string, AppointmentStatus> = {
 };
 
 export default function StaffAppointments() {
+
   const hospitalId = getStaffHospitalId();
   const [activeTab, setActiveTab] = useState<"active" | "past">("active");
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "All">("All");

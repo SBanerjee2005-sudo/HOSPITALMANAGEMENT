@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { getHospitalById, type Doctor } from "../../data";
+import { type Doctor } from "../../data";
+import { useDashboardData } from "../../hooks/useDashboardData";
+;
 import { getUser } from "../../utils/auth";
 import { api } from "../../services/api.ts";
 
 export default function BookAppointment() {
+  const {   getHospitalById } = useDashboardData();
+
   const { doctorId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

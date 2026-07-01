@@ -1,17 +1,16 @@
 import { useState, useEffect } from "react";
 import { AlertTriangle, CalendarClock, ClipboardList, FileText, Users } from "lucide-react";
-import {
-  getDoctorById,
-  getDoctorNotifications,
-  getDoctorSchedulesByDoctor,
-  getHospitalById,
-  getPatientsByHospital,
-} from "../../data";
+import { getDoctorById, getPatientsByHospital, getDoctorSchedulesByDoctor, getDoctorNotifications } from "../../data";
+
+import { useDashboardData } from "../../hooks/useDashboardData";
+;
 import { getDoctorScope } from "../../utils/roleScope";
 import { api } from "../../services/api.ts";
 import { getUser } from "../../utils/auth";
 
 export default function DoctorDashboard() {
+  const {  getHospitalById } = useDashboardData();
+
   const { doctorId, hospitalId } = getDoctorScope();
   const doctor = getDoctorById(doctorId);
   const hospital = getHospitalById(hospitalId);

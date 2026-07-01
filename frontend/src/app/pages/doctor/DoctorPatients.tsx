@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
-import {
-  getAppointmentsByDoctor,
-  getMedicalRecordByPatientId,
-  getPatientsByHospital,
-} from "../../data";
+import { getPatientsByHospital, getMedicalRecordByPatientId, getAppointmentsByDoctor } from "../../data";
+
+;
 import { getDoctorScope } from "../../utils/roleScope";
 
 export default function DoctorPatients() {
+
   const { doctorId, hospitalId } = getDoctorScope();
   const appointments = getAppointmentsByDoctor(doctorId).filter((appointment) => appointment.hospitalId === hospitalId);
   const patients = getPatientsByHospital(hospitalId).filter((patient) =>

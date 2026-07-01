@@ -1,11 +1,7 @@
 import { useMemo, useRef, useState } from "react";
-import {
-  getDoctorSchedulesByHospital,
-  getDoctorsByHospital,
-  type DoctorSchedule,
-  type ScheduleAvailability,
-  type ShiftType,
-} from "../../data";
+import { type DoctorSchedule, type ScheduleAvailability, type ShiftType } from "../../data";
+import { useDashboardData } from "../../hooks/useDashboardData";
+import { useDoctorData } from "../../hooks/useDoctorData";
 import { getStaffHospitalId } from "../../utils/roleScope";
 
 type ViewMode = "Daily" | "Weekly";
@@ -48,8 +44,11 @@ const initialForm: ScheduleForm = {
 };
 
 export default function StaffScheduling() {
+  const {  doctors: allDoctors } = useDashboardData();
+  const { schedule: docSchedule } = useDoctorData();
+
   const hospitalId = getStaffHospitalId();
-  const doctors = getDoctorsByHospital(hospitalId);
+  const doctors = allDoctors.filter(d => d.hospitalId === hospitalId);
 
   const [viewMode, setViewMode] = useState<ViewMode>("Weekly");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
@@ -61,7 +60,7 @@ export default function StaffScheduling() {
     roomNumber: "C-201",
   });
 
-  const [schedules, setSchedules] = useState<DoctorSchedule[]>(getDoctorSchedulesByHospital(hospitalId));
+  const [schedules, setSchedules] = useState<DoctorSchedule[]>(docSchedule.filter(s => s.hospitalId === hospitalId));
   const [error, setError] = useState("");
   const scheduleIdCounter = useRef(900);
 

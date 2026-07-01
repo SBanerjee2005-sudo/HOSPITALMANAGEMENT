@@ -1,15 +1,13 @@
 import { useState } from "react";
-import {
-  doctors as centralizedDoctors,
-  getHospitalNameById,
-  hospitals,
-  type Doctor,
-} from "../../data";
+import { getHospitalNameById, type Doctor } from "../../data";
+
+import { useDashboardData } from "../../hooks/useDashboardData";
+;
 
 type DoctorFormState = Omit<Doctor, "id"> & { id?: number };
 
 const initialForm = (): DoctorFormState => ({
-  hospitalId: hospitals[0]?.id ?? 1,
+  hospitalId: 1,
   department: "Cardiology",
   name: "",
   experience: 0,
@@ -20,7 +18,9 @@ const initialForm = (): DoctorFormState => ({
 });
 
 export default function Doctors() {
-  const [doctors, setDoctors] = useState<Doctor[]>(centralizedDoctors);
+  const { hospitals } = useDashboardData();
+
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [search, setSearch] = useState("");
   const [hospitalFilter, setHospitalFilter] = useState<number | "All">("All");
 

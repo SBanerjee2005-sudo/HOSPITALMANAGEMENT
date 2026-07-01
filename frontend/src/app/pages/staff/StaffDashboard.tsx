@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
 import { CalendarCheck2, CircleAlert, DollarSign, HeartPulse, Stethoscope, Users, ShieldAlert, Loader2, UserCheck } from "lucide-react";
-import {
-  getAppointmentsByHospital,
-  getDoctorsByHospital,
-  getHospitalById,
-  getHospitalReportSummary,
-  getPatientsByHospital,
-  getStaffNotifications,
-} from "../../data";
+import { getPatientsByHospital, getDoctorsByHospital, getAppointmentsByHospital, getStaffNotifications, getHospitalReportSummary } from "../../data";
+
+import { useDashboardData } from "../../hooks/useDashboardData";
+;
 import { getStaffHospitalId } from "../../utils/roleScope";
 import { api } from "../../services/api";
 
@@ -24,6 +20,8 @@ const isToday = (date: string) => {
 };
 
 export default function StaffDashboard() {
+  const { getHospitalById, adminPatients: allPatients, doctors: allDoctors, appointments: allAppointments } = useDashboardData();
+
   const hospitalId = getStaffHospitalId();
   const hospital = getHospitalById(hospitalId);
   const [pendingDoctors, setPendingDoctors] = useState<any[]>([]);
@@ -52,7 +50,7 @@ export default function StaffDashboard() {
   const [department, setDepartment] = useState("Cardiology");
   const [fees, setFees] = useState(500);
   const [experience, setExperience] = useState(2);
-  const departments = hospital?.departments.map((d: any) => d.name) || [
+  const departments = hospital?.departments?.map((d: any) => d.name) || [
     "Cardiology",
     "Neurology",
     "Pediatrics",
@@ -62,7 +60,7 @@ export default function StaffDashboard() {
 
   const handleApproveClick = (user: any) => {
     setSelectedDoctor(user);
-    const defaultDept = hospital?.departments[0]?.name || "Cardiology";
+    const defaultDept = hospital?.departments?.[0]?.name || "Cardiology";
     setSpecialization(defaultDept);
     setDepartment(defaultDept);
     setFees(500);
@@ -84,14 +82,26 @@ export default function StaffDashboard() {
     }
   };
 
-  const patients = getPatientsByHospital(hospitalId);
-  const doctors = getDoctorsByHospital(hospitalId);
-  const appointments = getAppointmentsByHospital(hospitalId);
+  const patients = allPatients.filter(p => p.hospitalId === hospitalId);
+  const doctors = allDoctors.filter(d => d.hospitalId === hospitalId);
+  const appointments = allAppointments.filter(a => a.hospitalId === hospitalId);
+  
+  // Use mock data for notifications and reports for now
   const notifications = getStaffNotifications(hospitalId);
   const report = getHospitalReportSummary(hospitalId);
 
   const todayAppointments = appointments.filter((appointment) => isToday(appointment.date));
-  const emergencyCases = notifications.filter((notification) => notification.type === "emergency_alert").length;
+
+  // Dynamic Emergency Cases based on real patient diagnoses
+  const dynamicEmergencyCases = patients.filter(p => 
+    /emergency|heart attack|stroke|accident|trauma|critical|severe|blockage|cardiac/i.test(p.diagnosis)
+  ).length;
+
+  // Dynamic Bed Occupancy based on real admitted patients and hospital capacity
+  const totalBeds = (hospital as any)?.beds || (hospital as any)?.bedsAvailable || 100;
+  const occupiedBeds = patients.filter(p => p.status === "Admitted" || p.status === "In Treatment").length;
+  const bedsAvailable = Math.max(0, totalBeds - occupiedBeds);
+  const bedOccupancyPercentage = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
 
   const upcomingAppointments = [...appointments]
     .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
@@ -129,8 +139,8 @@ export default function StaffDashboard() {
     },
     {
       title: "Emergency Cases",
-      value: emergencyCases,
-      subtitle: "Alerts in this shift",
+      value: dynamicEmergencyCases,
+      subtitle: "Active critical cases",
       icon: CircleAlert,
     },
     {
@@ -141,8 +151,8 @@ export default function StaffDashboard() {
     },
     {
       title: "Bed Occupancy",
-      value: `${report?.avgBedOccupancy ?? 0}%`,
-      subtitle: `${hospital?.bedsAvailable ?? 0} beds available`,
+      value: `${bedOccupancyPercentage}%`,
+      subtitle: `${bedsAvailable} beds available`,
       icon: HeartPulse,
     },
   ];
@@ -174,6 +184,73 @@ export default function StaffDashboard() {
           );
         })}
       </div>
+
+      {/* Detailed Bed Inventory */}
+      {(() => {
+        const admittedPatients = patients.filter(p => p.status === "Admitted" || p.status === "In Treatment" || p.status === "Emergency");
+        
+        const icuCapacity = Math.max(1, Math.floor(totalBeds * 0.20));
+        const generalCapacity = Math.max(1, Math.floor(totalBeds * 0.50));
+        const otherCapacity = Math.max(1, totalBeds - icuCapacity - generalCapacity);
+        
+        let icuOccupied = 0, generalOccupied = 0, otherOccupied = 0;
+        
+        admittedPatients.forEach(p => {
+          const isCritical = /emergency|heart attack|stroke|accident|trauma|critical|severe|blockage|cardiac/i.test(p.diagnosis);
+          if (isCritical && icuOccupied < icuCapacity) {
+            icuOccupied++;
+          } else if (!isCritical && generalOccupied < generalCapacity) {
+            generalOccupied++;
+          } else if (otherOccupied < otherCapacity) {
+            otherOccupied++;
+          } else if (icuOccupied < icuCapacity) {
+            icuOccupied++;
+          } else {
+            generalOccupied++;
+          }
+        });
+
+        const sections = [
+          { name: "ICU (Intensive Care)", capacity: icuCapacity, occupied: icuOccupied, available: Math.max(0, icuCapacity - icuOccupied), color: "rose" },
+          { name: "General Wards", capacity: generalCapacity, occupied: generalOccupied, available: Math.max(0, generalCapacity - generalOccupied), color: "cyan" },
+          { name: "Other Wards (Private, Maternity)", capacity: otherCapacity, occupied: otherOccupied, available: Math.max(0, otherCapacity - otherOccupied), color: "emerald" },
+        ];
+
+        return (
+          <div className="surface-card p-5">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+              <HeartPulse className="text-cyan-700" size={18} />
+              <span>Detailed Bed Inventory</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {sections.map((sec) => (
+                <div key={sec.name} className={`rounded-xl border border-${sec.color}-100 bg-${sec.color}-50/30 p-4`}>
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="font-bold text-slate-800">{sec.name}</p>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full bg-${sec.color}-100 text-${sec.color}-700`}>
+                      {sec.available} Available
+                    </span>
+                  </div>
+                  <div className="flex items-end justify-between mt-4">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase">Occupied</p>
+                      <p className="text-xl font-black text-slate-900">{sec.occupied} <span className="text-sm font-medium text-slate-400">/ {sec.capacity}</span></p>
+                    </div>
+                    <div className="w-1/2">
+                      <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full bg-${sec.color}-500 rounded-full`} 
+                          style={{ width: `${Math.min(100, (sec.occupied / sec.capacity) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Pending Doctor Verifications (Specific to this Hospital Branch) */}
       <div className="surface-card p-5">

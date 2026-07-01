@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getPatientsByHospital } from "../../data";
+
+;
 import { getDoctorScope } from "../../utils/roleScope";
 import { api } from "../../services/api";
 import { Printer, Calendar, Pill, Activity, Stethoscope, ArrowLeft } from "lucide-react";
@@ -17,6 +19,7 @@ type PrescriptionForm = {
 };
 
 export default function DoctorPrescriptions() {
+
   const { doctorId, hospitalId } = getDoctorScope();
   const patients = getPatientsByHospital(hospitalId);
   const location = useLocation();

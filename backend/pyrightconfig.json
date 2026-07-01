@@ -1,0 +1,9 @@
+{
+  "include": ["."],
+  "pythonPath": "C:\\Users\\baner\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+  "extraPaths": ["."],
+  "venvPath": ".",
+  "venv": ".venv",
+  "reportMissingModuleSource": "none",
+  "reportMissingImports": "warning"
+}

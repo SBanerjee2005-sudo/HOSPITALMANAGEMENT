@@ -1,0 +1,92 @@
+[
+  {
+    "id": "P001",
+    "name": "Rohan Mukherjee",
+    "age": 45,
+    "gender": "Male",
+    "diagnosis": "Hypertension",
+    "status": "In Treatment",
+    "hospitalId": 1
+  },
+  {
+    "id": "P002",
+    "name": "Priyanka Sen",
+    "age": 32,
+    "gender": "Female",
+    "diagnosis": "Diabetes Type 2",
+    "status": "Admitted",
+    "hospitalId": 2
+  },
+  {
+    "id": "P003",
+    "name": "Ritwik Ghosh",
+    "age": 27,
+    "gender": "Male",
+    "diagnosis": "Migraine",
+    "status": "Waiting",
+    "hospitalId": 3
+  },
+  {
+    "id": "P004",
+    "name": "Ananya Dutta",
+    "age": 54,
+    "gender": "Female",
+    "diagnosis": "Cardiac Arrhythmia",
+    "status": "Discharged",
+    "hospitalId": 1
+  },
+  {
+    "id": "P005",
+    "name": "Imran Ali",
+    "age": 41,
+    "gender": "Male",
+    "diagnosis": "Pneumonia",
+    "status": "In Treatment",
+    "hospitalId": 2
+  },
+  {
+    "id": "P006",
+    "name": "Tanisha Roy",
+    "age": 36,
+    "gender": "Female",
+    "diagnosis": "Kidney Stone",
+    "status": "Admitted",
+    "hospitalId": 5
+  },
+  {
+    "id": "P007",
+    "name": "Sayan Chatterjee",
+    "age": 59,
+    "gender": "Male",
+    "diagnosis": "Post Stroke Rehab",
+    "status": "In Treatment",
+    "hospitalId": 6
+  },
+  {
+    "id": "P008",
+    "name": "Mou Das",
+    "age": 43,
+    "gender": "Female",
+    "diagnosis": "Thyroid Nodules",
+    "status": "Waiting",
+    "hospitalId": 4
+  },
+  {
+    "id": "P009",
+    "name": "Arif Khan",
+    "age": 48,
+    "gender": "Male",
+    "diagnosis": "ENT Infection",
+    "status": "Discharged",
+    "hospitalId": 5
+  },
+  {
+    "id": "P010",
+    "name": "Nabanita Ghosh",
+    "age": 62,
+    "gender": "Female",
+    "diagnosis": "Neuro Observation",
+    "status": "Admitted",
+    "hospitalId": 6
+  }
+]

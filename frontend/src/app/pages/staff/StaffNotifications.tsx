@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { getStaffNotifications, type AlertNotification } from "../../data";
+import { type AlertNotification, getStaffNotifications } from "../../data";
+
 import { getStaffHospitalId } from "../../utils/roleScope";
 
 const severityClass: Record<AlertNotification["severity"], string> = {
@@ -9,23 +10,25 @@ const severityClass: Record<AlertNotification["severity"], string> = {
 };
 
 export default function StaffNotifications() {
+  
+
   const hospitalId = getStaffHospitalId();
   const [filter, setFilter] = useState<"All" | AlertNotification["type"]>("All");
   const [rows, setRows] = useState(() => getStaffNotifications(hospitalId));
 
   const filteredRows = useMemo(
-    () => rows.filter((row) => filter === "All" || row.type === filter),
+    () => rows.filter((row: AlertNotification) => filter === "All" || row.type === filter),
     [filter, rows]
   );
 
-  const unreadCount = rows.filter((row) => !row.isRead).length;
+  const unreadCount = rows.filter((row: AlertNotification) => !row.isRead).length;
 
   const markAsRead = (id: string) => {
-    setRows((prev) => prev.map((row) => (row.id === id ? { ...row, isRead: true } : row)));
+    setRows((prev: AlertNotification[]) => prev.map((row: AlertNotification) => (row.id === id ? { ...row, isRead: true } : row)));
   };
 
   const markAllRead = () => {
-    setRows((prev) => prev.map((row) => ({ ...row, isRead: true })));
+    setRows((prev: AlertNotification[]) => prev.map((row: AlertNotification) => ({ ...row, isRead: true })));
   };
 
   return (
@@ -60,13 +63,22 @@ export default function StaffNotifications() {
         {filteredRows.map((notification) => (
           <article key={notification.id} className="surface-card p-4">
             <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-              <div>
-                <p className="font-semibold text-slate-900">{notification.title}</p>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-800">{notification.title}</p>
                 <p className="mt-1 text-sm text-slate-600">{notification.message}</p>
-                <p className="mt-2 text-xs text-slate-500">{new Date(notification.timestamp).toLocaleString()}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${severityClass[notification.severity]}`}>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-semibold text-slate-500">
+                  {new Date(notification.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                    severityClass[notification.severity as keyof typeof severityClass]
+                  }`}
+                >
                   {notification.severity}
                 </span>
                 {!notification.isRead && (

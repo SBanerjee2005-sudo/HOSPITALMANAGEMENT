@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 
 from app.websocket import manager
-from app.routers import auth, hospitals, patients, doctors, appointments, billing, prescriptions
+from app.routers import auth, hospitals, patients, doctors, appointments, billing, prescriptions, realtime
 
 ENV = os.getenv("ENV", "development")
 
@@ -31,6 +31,7 @@ app.include_router(doctors.router)
 app.include_router(appointments.router)
 app.include_router(billing.router)
 app.include_router(prescriptions.router)
+app.include_router(realtime.router)
 
 # ================== HOME ROUTE ==================
 @app.get("/")

@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
-import { getAppointmentsByDoctor, getDoctorSchedulesByDoctor } from "../../data";
+import { getDoctorSchedulesByDoctor, getAppointmentsByDoctor } from "../../data";
+
+;
 import { getDoctorScope } from "../../utils/roleScope";
 
 type CalendarView = "Daily" | "Weekly";
 
 export default function DoctorCalendar() {
+
   const { doctorId, hospitalId } = getDoctorScope();
   const [view, setView] = useState<CalendarView>("Weekly");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));

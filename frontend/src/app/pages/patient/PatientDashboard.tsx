@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { hospitals } from "../../data";
+import { useDashboardData } from "../../hooks/useDashboardData";
+import PublicHealthAlerts from "../../components/PublicHealthAlerts";
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
+  const { hospitals, loading } = useDashboardData();
   const [search, setSearch] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("All");
   const [ratingFilter, setRatingFilter] = useState("All");
@@ -46,6 +48,8 @@ export default function PatientDashboard() {
 
   return (
     <div className="space-y-6">
+      <PublicHealthAlerts />
+
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">Patient Portal</p>
@@ -138,7 +142,7 @@ export default function PatientDashboard() {
         ))}
       </div>
 
-      {filteredHospitals.length === 0 && (
+      {filteredHospitals.length === 0 && !loading && (
         <p className="surface-card mt-6 p-5 text-slate-600">No hospitals match the selected filters.</p>
       )}
     </div>

@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { getDoctorNotifications } from "../../data";
+
+;
 import { getDoctorScope } from "../../utils/roleScope";
 
 export default function DoctorNotifications() {
+
   const { doctorId, hospitalId } = getDoctorScope();
   const [rows, setRows] = useState(() =>
     getDoctorNotifications(doctorId).filter((notification) => notification.hospitalId === hospitalId)

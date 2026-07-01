@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { getHospitalById } from "../../data";
+import { useDashboardData } from "../../hooks/useDashboardData";
+;
 import { getStaffHospitalId } from "../../utils/roleScope";
 
 export default function StaffSettings() {
+  const {   getHospitalById } = useDashboardData();
+
   const hospitalId = getStaffHospitalId();
   const hospital = getHospitalById(hospitalId);
 

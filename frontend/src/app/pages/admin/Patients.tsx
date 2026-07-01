@@ -1,10 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
 import {
   getHospitalNameById,
-  hospitals,
   type AdminPatient,
 } from "../../data";
 import { api } from "../../services/api.ts";
+import { useDashboardData } from "../../hooks/useDashboardData";
 
 type PatientStatus = AdminPatient["status"];
 
@@ -25,10 +25,11 @@ const initialForm: PatientFormState = {
   gender: "Male",
   diagnosis: "",
   status: "Admitted",
-  hospitalId: hospitals[0]?.id ?? 1,
+  hospitalId: 1,
 };
 
 export default function Patients() {
+  const { hospitals } = useDashboardData();
   const [patients, setPatients] = useState<AdminPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

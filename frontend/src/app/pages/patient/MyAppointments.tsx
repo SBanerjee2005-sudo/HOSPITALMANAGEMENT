@@ -2,7 +2,8 @@ import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../services/api.ts";
 import { getUser } from "../../utils/auth";
-import { hospitals, doctors as mockDoctors } from "../../data";
+import { useDashboardData } from "../../hooks/useDashboardData";
+import { type Doctor } from "../../data";
 
 export type PatientAppointment = {
   id: string;
@@ -22,6 +23,8 @@ export type PatientAppointment = {
 };
 
 export default function MyAppointments() {
+  const { hospitals, doctors } = useDashboardData();
+
   const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
   const [pastAppointments, setPastAppointments] = useState<PatientAppointment[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
@@ -48,7 +51,7 @@ export default function MyAppointments() {
 
       const mapAppointment = (apt: any) => {
         const doctor = doctorsData.find((d: any) => d.id === apt.doctorId) || 
-                       mockDoctors.find((d) => d.id === apt.doctorId);
+                       doctors.find((d: Doctor) => d.id === apt.doctorId);
         const hospital = hospitals.find((h) => h.id === apt.hospitalId);
 
         return {

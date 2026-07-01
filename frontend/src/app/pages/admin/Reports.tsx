@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, useEffect, type ReactNode } from "react";
+import { getHospitalMonthlyRevenue, getHospitalYearlyRevenue, getNetworkMonthlyRevenue, revenueMonths } from "../../data";
 import {
   Bar,
   BarChart,
@@ -14,16 +15,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Banknote, Building2, CirclePercent, Hospital, TrendingUp, Users } from "lucide-react";
-import {
-  adminPatients,
-  doctors,
-  getHospitalMonthlyRevenue,
-  getHospitalYearlyRevenue,
-  getNetworkMonthlyRevenue,
-  hospitals,
-  revenueMonths,
-} from "../../data";
+import { Loader2, Banknote, Building2, CirclePercent, Hospital, TrendingUp, Users } from "lucide-react";
+import { useDashboardData } from "../../hooks/useDashboardData";
 
 type TooltipProps = {
   active?: boolean;
@@ -156,8 +149,16 @@ const renderHospitalBreakdownLabel = ({
 };
 
 export default function Reports() {
-  const [selectedHospitalId, setSelectedHospitalId] = useState<number>(hospitals[0]?.id ?? 1);
-  const [comparisonHospitalId, setComparisonHospitalId] = useState<number>(hospitals[1]?.id ?? hospitals[0]?.id ?? 1);
+  const { hospitals, adminPatients, doctors, loading } = useDashboardData();
+  const [selectedHospitalId, setSelectedHospitalId] = useState<number | null>(null);
+  const [comparisonHospitalId, setComparisonHospitalId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!loading && hospitals.length > 0 && selectedHospitalId === null) {
+      setSelectedHospitalId(hospitals[0].id);
+      setComparisonHospitalId(hospitals[1]?.id ?? hospitals[0].id);
+    }
+  }, [loading, hospitals, selectedHospitalId]);
   const [selectedYear, setSelectedYear] = useState<ReportYear>(2026);
   const [revenueView, setRevenueView] = useState<RevenueView>("yearly");
 
@@ -178,7 +179,15 @@ export default function Reports() {
         fill: COLORS[index % COLORS.length],
       };
     });
-  }, []);
+  }, [hospitals, adminPatients]);
+
+  if (loading || selectedHospitalId === null || comparisonHospitalId === null) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-600" />
+      </div>
+    );
+  }
 
   const selectedHospital =
     hospitals.find((hospital) => hospital.id === selectedHospitalId) ?? hospitals[0];
@@ -649,7 +658,7 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody>
-                {monthlyRevenueSeries.map((item) => {
+                {monthlyRevenueSeries.map((item: any) => {
                   const difference = item.selected - item.compare;
                   return (
                     <tr key={item.month} className="border-b border-slate-100 transition-colors hover:bg-slate-50/80 last:border-0">

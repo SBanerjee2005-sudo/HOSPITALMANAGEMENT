@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.dependencies import get_db, verify_admin_key
 from app.models import Patient, Doctor, Hospital, Appointment
-from app.schemas import PatientCreate, PatientResponse, PatientDashboard, AppointmentResponse, AppointmentCreate
+from app.schemas import PatientCreate, PatientUpdate, PatientResponse, PatientDashboard, AppointmentResponse, AppointmentCreate
 
 router = APIRouter()
 
@@ -38,6 +38,30 @@ def delete_patient(patient_id: int, db: Session = Depends(get_db), _: bool = Dep
     db.delete(patient)
     db.commit()
     return {"message": "Patient deleted successfully"}
+
+@router.put("/patients/{patient_id}", response_model=PatientResponse)
+def update_patient(patient_id: int, update_data: PatientUpdate, db: Session = Depends(get_db), _: bool = Depends(verify_admin_key)):
+    """Update a patient by ID - Requires x-api-key header"""
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    if update_data.name is not None:
+        patient.name = update_data.name
+    if update_data.age is not None:
+        patient.age = update_data.age
+    if update_data.gender is not None:
+        patient.gender = update_data.gender
+    if update_data.diagnosis is not None:
+        patient.diagnosis = update_data.diagnosis
+    if update_data.status is not None:
+        patient.status = update_data.status
+    if update_data.hospitalId is not None:
+        patient.hospitalId = update_data.hospitalId
+        
+    db.commit()
+    db.refresh(patient)
+    return patient
 
 @router.get("/patient/dashboard", response_model=PatientDashboard)
 def get_patient_dashboard(db: Session = Depends(get_db)):

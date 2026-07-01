@@ -1,0 +1,86 @@
+[
+  {
+    "id": "APT-001",
+    "patientId": "P004",
+    "doctorId": 101,
+    "hospitalId": 1,
+    "date": "2026-04-28",
+    "time": "09:30",
+    "type": "Follow-up",
+    "mode": "In-person",
+    "status": "Approved",
+    "notes": "BP and medication review"
+  },
+  {
+    "id": "APT-002",
+    "patientId": "P002",
+    "doctorId": 105,
+    "hospitalId": 2,
+    "date": "2026-04-27",
+    "time": "14:00",
+    "type": "Consultation",
+    "mode": "In-person",
+    "status": "Scheduled",
+    "notes": "Diabetes care plan update"
+  },
+  {
+    "id": "APT-003",
+    "patientId": "P010",
+    "doctorId": 115,
+    "hospitalId": 6,
+    "date": "2026-04-26",
+    "time": "11:15",
+    "type": "Diagnostic",
+    "mode": "Teleconsult",
+    "status": "Completed",
+    "notes": "Neuro follow-up and reports"
+  },
+  {
+    "id": "APT-004",
+    "patientId": "P009",
+    "doctorId": 113,
+    "hospitalId": 5,
+    "date": "2026-04-29",
+    "time": "16:10",
+    "type": "Procedure",
+    "mode": "In-person",
+    "status": "Pending Approval",
+    "notes": "ENT minor procedure"
+  },
+  {
+    "id": "APT-005",
+    "patientId": "P008",
+    "doctorId": 101,
+    "hospitalId": 4,
+    "date": "2026-05-12",
+    "time": "10:15",
+    "type": "Consultation",
+    "mode": "In-person",
+    "status": "Pending Approval",
+    "notes": "Cardiology consult at Peerless"
+  },
+  {
+    "id": "APT-006",
+    "patientId": "P006",
+    "doctorId": 101,
+    "hospitalId": 6,
+    "date": "2026-05-13",
+    "time": "15:30",
+    "type": "Follow-up",
+    "mode": "Teleconsult",
+    "status": "Scheduled",
+    "notes": "Multi-hospital follow-up"
+  },
+  {
+    "id": "APT-007",
+    "patientId": "P009",
+    "doctorId": 105,
+    "hospitalId": 5,
+    "date": "2026-05-14",
+    "time": "11:00",
+    "type": "Consultation",
+    "mode": "In-person",
+    "status": "Approved",
+    "notes": "Cardiology review at Ruby"
+  }
+]

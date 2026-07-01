@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import HospitalMap from "../../components/HospitalMap";
 import {
@@ -17,13 +17,23 @@ import {
 import {
   getRoleHomePath,
   loginUser,
+  getUser,
   type UserRole,
 } from "../../utils/auth";
-import { hospitals } from "../../data";
+import { useDashboardData } from "../../hooks/useDashboardData";
+;
 import { api } from "../../services/api";
 
 export default function Login() {
+  const { hospitals } = useDashboardData();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const currentUser = getUser();
+    if (currentUser) {
+      navigate(getRoleHomePath(currentUser.role));
+    }
+  }, [navigate]);
 
   const [isRegister, setIsRegister] = useState(false);
 

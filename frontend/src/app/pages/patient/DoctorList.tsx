@@ -1,9 +1,13 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getHospitalById, type Doctor } from "../../data";
+import { type Doctor } from "../../data";
+import { useDashboardData } from "../../hooks/useDashboardData";
+;
 import { api } from "../../services/api.ts";
 
 export default function DoctorList() {
+  const {  getHospitalById } = useDashboardData();
+
   const { id, department } = useParams();
   const navigate = useNavigate();
   const [deptDoctors, setDeptDoctors] = useState<Doctor[]>([]);

@@ -13,8 +13,9 @@ import {
   YAxis,
 } from "recharts";
 import { Activity, Building2, Stethoscope, Users, UserCheck, ShieldAlert, Loader2 } from "lucide-react";
-import { adminPatients, doctors, hospitals, getHospitalById } from "../../data";
+
 import { api } from "../../services/api";
+import { useDashboardData } from "../../hooks/useDashboardData";
 
 type EmergencyStatus = "Active" | "Busy" | "Unavailable";
 
@@ -40,6 +41,8 @@ export default function Dashboard() {
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
   const [actioningUsername, setActioningUsername] = useState<string | null>(null);
+
+  const { hospitals, doctors, adminPatients, loading, getHospitalById } = useDashboardData();
 
   const fetchPendingUsers = async () => {
     setLoadingPending(true);
@@ -96,6 +99,14 @@ export default function Dashboard() {
   const [selectedEmergencyStatus, setSelectedEmergencyStatus] =
     useState<EmergencyStatus>("Active");
   const [selectedStatusHospitalId, setSelectedStatusHospitalId] = useState<number | null>(null);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-600" />
+      </div>
+    );
+  }
 
   const totalBedsAvailable = hospitals.reduce(
     (sum, hospital) => sum + hospital.bedsAvailable,

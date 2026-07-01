@@ -1,6 +1,5 @@
 import {
-  Bar,
-  BarChart,
+  Bar,  BarChart,
   CartesianGrid,
   Legend,
   ResponsiveContainer,
@@ -13,25 +12,21 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import {
-  getAppointmentsByHospital,
-  getDoctorsByHospital,
-  getHospitalById,
-  getHospitalMonthlyRevenue,
-  getHospitalReportSummary,
-  getPatientsByHospital,
-} from "../../data";
+import { useDashboardData } from "../../hooks/useDashboardData";
+import { getHospitalMonthlyRevenue, getHospitalReportSummary } from "../../data";
 import { useState } from "react";
 import { getStaffHospitalId } from "../../utils/roleScope";
 
 const colors = ["#0891b2", "#0ea5e9", "#22c55e", "#f59e0b", "#ef4444"];
 
 export default function StaffReports() {
+  const {  doctors: allDoctors, appointments: allAppointments, adminPatients, getHospitalById } = useDashboardData();
+
   const hospitalId = getStaffHospitalId();
   const hospital = getHospitalById(hospitalId);
-  const doctors = getDoctorsByHospital(hospitalId);
-  const patients = getPatientsByHospital(hospitalId);
-  const appointments = getAppointmentsByHospital(hospitalId);
+  const doctors = allDoctors.filter(d => d.hospitalId === hospitalId);
+  const patients = adminPatients.filter(p => p.hospitalId === hospitalId);
+  const appointments = allAppointments.filter(a => a.hospitalId === hospitalId);
   const monthlyRevenue = getHospitalMonthlyRevenue(hospitalId);
   const summary = getHospitalReportSummary(hospitalId);
   const [revenueView, setRevenueView] = useState<"Monthly" | "Yearly">("Monthly");
@@ -60,14 +55,14 @@ export default function StaffReports() {
 
   const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const yearMultiplier = selectedYear === 2025 ? 0.86 : 1;
-  const selectedMonthlyRevenue = monthlyRevenue.map((value) => Math.round(value * yearMultiplier));
+  const selectedMonthlyRevenue = monthlyRevenue.map((value: number) => Math.round(value * yearMultiplier));
   const revenueSeries = monthLabels.map((month, index) => ({ month, revenue: selectedMonthlyRevenue[index] ?? 0 }));
-  const yearTotal = selectedMonthlyRevenue.reduce((sum, value) => sum + value, 0);
+  const yearTotal = selectedMonthlyRevenue.reduce((sum: number, value: number) => sum + value, 0);
   const quarterlyRevenue = [
-    { quarter: "Q1", revenue: selectedMonthlyRevenue.slice(0, 3).reduce((sum, value) => sum + value, 0) },
-    { quarter: "Q2", revenue: selectedMonthlyRevenue.slice(3, 6).reduce((sum, value) => sum + value, 0) },
-    { quarter: "Q3", revenue: selectedMonthlyRevenue.slice(6, 9).reduce((sum, value) => sum + value, 0) },
-    { quarter: "Q4", revenue: selectedMonthlyRevenue.slice(9, 12).reduce((sum, value) => sum + value, 0) },
+    { quarter: "Q1", revenue: selectedMonthlyRevenue.slice(0, 3).reduce((sum: number, value: number) => sum + value, 0) },
+    { quarter: "Q2", revenue: selectedMonthlyRevenue.slice(3, 6).reduce((sum: number, value: number) => sum + value, 0) },
+    { quarter: "Q3", revenue: selectedMonthlyRevenue.slice(6, 9).reduce((sum: number, value: number) => sum + value, 0) },
+    { quarter: "Q4", revenue: selectedMonthlyRevenue.slice(9, 12).reduce((sum: number, value: number) => sum + value, 0) },
   ];
 
   return (

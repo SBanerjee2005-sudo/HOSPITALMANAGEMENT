@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, LogOut, Search, ShieldCheck, UserRound } from "lucide-react";
 import { getUser, logoutUser, updateLoggedInUser } from "../utils/auth";
-import { hospitals, doctors, adminPatients, appointments } from "../data";
+import { useDashboardData } from "../hooks/useDashboardData";
 import { getCurrentHospitalId } from "../utils/roleScope";
 
 type SearchResult = {
@@ -15,6 +15,7 @@ type SearchResult = {
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { hospitals, doctors, adminPatients, appointments } = useDashboardData();
   const [user, setUser] = useState(getUser());
   const activeHospitalId = getCurrentHospitalId();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -34,6 +35,7 @@ export default function Layout() {
     if (user?.role === "admin") {
       return [
         { to: "/admin", label: "Dashboard", end: true },
+        { to: "hospitals", label: "Hospitals" },
         { to: "patients", label: "Patients" },
         { to: "doctors", label: "Doctors" },
         { to: "appointments", label: "Appointments" },
@@ -239,7 +241,7 @@ export default function Layout() {
         </nav>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen flex-1 flex-col min-w-0">
         <header className="sticky top-0 z-10 p-3 md:p-5">
           <div className="glass-topbar mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-2xl px-3 py-3 md:px-5">
             <div className="flex items-center gap-3">

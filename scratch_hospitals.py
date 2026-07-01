@@ -1,0 +1,38 @@
+with open('backend/app/routers/hospitals.py', 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+
+new_lines = lines[:10]
+new_lines.append('@router.get("/hospitals")\n')
+new_lines.append('def get_hospitals(db: Session = Depends(get_db)):\n')
+new_lines.append('    """Get all hospitals with dynamically generated metrics"""\n')
+new_lines.append('    hospitals = db.query(Hospital).all()\n')
+new_lines.append('    result = []\n')
+new_lines.append('    for h in hospitals:\n')
+new_lines.append('        bed_inventory = [\n')
+new_lines.append('            {"type": "ICU", "available": max(0, h.beds // 4) if h.beds else 0, "busy": max(0, h.beds // 2) if h.beds else 0, "unavailable": max(0, h.beds - (h.beds // 4) - (h.beds // 2)) if h.beds else 0},\n')
+new_lines.append('            {"type": "General Ward", "available": h.beds or 0, "busy": 0, "unavailable": 0}\n')
+new_lines.append('        ]\n')
+new_lines.append('        departments = [\n')
+new_lines.append('            {"name": "Cardiology", "doctorCount": h.doctors or 0, "availability": "Available"}\n')
+new_lines.append('        ]\n')
+new_lines.append('        result.append({\n')
+new_lines.append('            "id": h.id,\n')
+new_lines.append('            "name": h.name,\n')
+new_lines.append('            "location": h.district or h.city or "Unknown",\n')
+new_lines.append('            "specialties": ["Cardiology", "Neurology", "Orthopedics"],\n')
+new_lines.append('            "rating": h.rating or 4.0,\n')
+new_lines.append('            "isOpen": h.is_active,\n')
+new_lines.append('            "bedsAvailable": h.beds or 0,\n')
+new_lines.append('            "emergencyStatus": "Active" if (h.beds and h.beds > 0) else "Busy",\n')
+new_lines.append('            "bedInventory": bed_inventory,\n')
+new_lines.append('            "departments": departments,\n')
+new_lines.append('            "lat": h.lat,\n')
+new_lines.append('            "lng": h.lng\n')
+new_lines.append('        })\n')
+new_lines.append('    return result\n')
+new_lines.append('\n')
+
+new_lines.extend(lines[666:])
+
+with open('backend/app/routers/hospitals.py', 'w', encoding='utf-8') as f:
+    f.writelines(new_lines)

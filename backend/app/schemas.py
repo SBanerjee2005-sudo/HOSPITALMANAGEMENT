@@ -16,6 +16,14 @@ class PatientCreate(BaseModel):
     status: Optional[str] = "Waiting"
     hospitalId: Optional[int] = 1
 
+class PatientUpdate(BaseModel):
+    name: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    diagnosis: Optional[str] = None
+    status: Optional[str] = None
+    hospitalId: Optional[int] = None
+
 class PatientResponse(BaseModel):
     id: int
     name: str

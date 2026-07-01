@@ -1,10 +1,14 @@
 import { useMemo, useRef, useState } from "react";
 import { getDoctorSchedulesByDoctor, type DoctorSchedule } from "../../data";
+
+;
 import { getDoctorScope } from "../../utils/roleScope";
 
 type ModeFilter = "All" | "Online" | "Offline" | "Hybrid";
 
 export default function DoctorSchedule() {
+  
+
   const { doctorId, hospitalId } = getDoctorScope();
   const [modeFilter, setModeFilter] = useState<ModeFilter>("All");
   const [rows, setRows] = useState<DoctorSchedule[]>(

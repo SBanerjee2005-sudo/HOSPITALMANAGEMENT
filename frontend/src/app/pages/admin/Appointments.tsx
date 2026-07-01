@@ -1,84 +1,22 @@
-import { useMemo, useState } from "react";
-import { adminPatients, doctors, hospitals } from "../../data";
-
-type AppointmentStatus = "Scheduled" | "In Progress" | "Completed" | "Cancelled";
-type VisitType = "Consultation" | "Follow-up" | "Procedure" | "Diagnostic";
-type VisitMode = "In-person" | "Teleconsult";
-
-type AppointmentRecord = {
-  id: string;
-  patientId: string;
-  doctorId: number;
-  hospitalId: number;
-  date: string;
-  time: string;
-  type: VisitType;
-  mode: VisitMode;
-  status: AppointmentStatus;
-  notes: string;
-};
-
-const initialAppointments: AppointmentRecord[] = [
-  {
-    id: "APT-001",
-    patientId: "P004",
-    doctorId: 101,
-    hospitalId: 1,
-    date: "2026-04-28",
-    time: "09:30",
-    type: "Follow-up",
-    mode: "In-person",
-    status: "Scheduled",
-    notes: "BP and medication review",
-  },
-  {
-    id: "APT-002",
-    patientId: "P002",
-    doctorId: 105,
-    hospitalId: 2,
-    date: "2026-04-27",
-    time: "14:00",
-    type: "Consultation",
-    mode: "In-person",
-    status: "In Progress",
-    notes: "Diabetes care plan update",
-  },
-  {
-    id: "APT-003",
-    patientId: "P010",
-    doctorId: 115,
-    hospitalId: 6,
-    date: "2026-04-26",
-    time: "11:15",
-    type: "Diagnostic",
-    mode: "Teleconsult",
-    status: "Completed",
-    notes: "Neuro follow-up and reports",
-  },
-  {
-    id: "APT-004",
-    patientId: "P009",
-    doctorId: 113,
-    hospitalId: 5,
-    date: "2026-04-29",
-    time: "16:10",
-    type: "Procedure",
-    mode: "In-person",
-    status: "Scheduled",
-    notes: "ENT minor procedure",
-  },
-];
+import { useMemo, useState, useEffect } from "react";
+import { useDashboardData } from "../../hooks/useDashboardData";
+import { Loader2 } from "lucide-react";
+import { type AppointmentRecord, type AppointmentStatus, type VisitType, type VisitMode } from "../../data";
 
 const statusStyle = (status: AppointmentStatus) => {
-  if (status === "Scheduled") return "bg-blue-100 text-blue-700";
+  if (status === "Scheduled" || status === "Approved") return "bg-blue-100 text-blue-700";
   if (status === "In Progress") return "bg-amber-100 text-amber-700";
   if (status === "Completed") return "bg-emerald-100 text-emerald-700";
+  if (status === "Pending Approval") return "bg-yellow-100 text-yellow-700";
   if (status === "Cancelled") return "bg-rose-100 text-rose-700";
   return "bg-slate-100 text-slate-700";
 };
 
-const formatTime = (time24: string) => {
-  const [hoursRaw, minutesRaw] = time24.split(":");
+const formatTime = (time24: string | null | undefined) => {
+  if (!time24) return "N/A";
+  const parts = time24.split(":");
+  if (parts.length < 2) return time24;
+  const [hoursRaw, minutesRaw] = parts;
   const hours = Number(hoursRaw);
   const minutes = Number(minutesRaw);
   if (Number.isNaN(hours) || Number.isNaN(minutes)) return time24;
@@ -88,7 +26,7 @@ const formatTime = (time24: string) => {
   return `${String(hour12).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${suffix}`;
 };
 
-const createDefaultForm = (): AppointmentRecord => {
+const createDefaultForm = (hospitals: any[], doctors: any[], adminPatients: any[]): AppointmentRecord => {
   const firstHospitalId = hospitals[0]?.id ?? 1;
   const firstDoctorId = doctors.find((doctor) => doctor.hospitalId === firstHospitalId)?.id ?? doctors[0]?.id ?? 101;
   const firstPatientId =
@@ -110,32 +48,70 @@ const createDefaultForm = (): AppointmentRecord => {
   };
 };
 
+import React from "react";
+
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-10 text-red-600 bg-red-50 h-screen overflow-auto">
+          <h1 className="text-2xl font-bold">Something went wrong.</h1>
+          <pre className="mt-4 text-sm whitespace-pre-wrap">{this.state.error?.stack || this.state.error?.message || "Unknown error"}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function Appointments() {
+  return (
+    <ErrorBoundary>
+      <AppointmentsContent />
+    </ErrorBoundary>
+  );
+}
+
+function AppointmentsContent() {
+  const { hospitals, doctors, adminPatients, appointments: initialAppointments, loading } = useDashboardData();
   const [appointments, setAppointments] = useState<AppointmentRecord[]>(initialAppointments);
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"list" | "calendar">("list");
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "All">("All");
   const [hospitalFilter, setHospitalFilter] = useState<number | "All">("All");
 
+  useEffect(() => {
+    setAppointments(initialAppointments);
+  }, [initialAppointments]);
+
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<AppointmentRecord>(() => createDefaultForm());
+  const [form, setForm] = useState<AppointmentRecord | null>(null);
 
   const patientById = useMemo(
     () => Object.fromEntries(adminPatients.map((patient) => [patient.id, patient])),
-    []
+    [adminPatients]
   );
   const doctorById = useMemo(
     () => Object.fromEntries(doctors.map((doctor) => [doctor.id, doctor])),
-    []
+    [doctors]
   );
   const hospitalById = useMemo(
     () => Object.fromEntries(hospitals.map((hospital) => [hospital.id, hospital])),
-    []
+    [hospitals]
   );
 
-  const availableDoctors = doctors.filter((doctor) => doctor.hospitalId === form.hospitalId);
-  const availablePatients = adminPatients.filter((patient) => patient.hospitalId === form.hospitalId);
+  const availableDoctors = form ? doctors.filter((doctor) => doctor.hospitalId === form.hospitalId) : [];
+  const availablePatients = form ? adminPatients.filter((patient) => patient.hospitalId === form.hospitalId) : [];
+
+  // Moved loading check below all hooks to prevent "Rendered more hooks" error
 
   const filteredAppointments = useMemo(() => {
     return appointments.filter((appointment) => {
@@ -175,29 +151,37 @@ export default function Appointments() {
   const completedCount = appointments.filter((appointment) => appointment.status === "Completed").length;
 
   const resetForm = () => {
-    setForm(createDefaultForm());
+    setForm(createDefaultForm(hospitals, doctors, adminPatients));
     setEditingId(null);
     setShowModal(false);
+  };
+
+  const handleAdd = () => {
+    setForm(createDefaultForm(hospitals, doctors, adminPatients));
+    setEditingId(null);
+    setShowModal(true);
   };
 
   const handleHospitalChange = (hospitalId: number) => {
     const nextDoctorId =
       doctors.find((doctor) => doctor.hospitalId === hospitalId)?.id ??
-      form.doctorId;
+      form?.doctorId;
     const nextPatientId =
       adminPatients.find((patient) => patient.hospitalId === hospitalId)?.id ??
-      form.patientId;
+      form?.patientId;
 
-    setForm((current) => ({
-      ...current,
-      hospitalId,
-      doctorId: nextDoctorId,
-      patientId: nextPatientId,
-    }));
+    if (form) {
+      setForm({
+        ...form,
+        hospitalId,
+        doctorId: nextDoctorId ?? 0,
+        patientId: nextPatientId ?? "",
+      });
+    }
   };
 
   const handleSave = () => {
-    if (!form.patientId || !form.doctorId || !form.hospitalId || !form.date || !form.time) {
+    if (!form || !form.patientId || !form.doctorId || !form.hospitalId || !form.date || !form.time) {
       return;
     }
 
@@ -238,6 +222,14 @@ export default function Appointments() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-600" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -248,7 +240,7 @@ export default function Appointments() {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={handleAdd}
           className="hover-float rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white hover:bg-blue-700"
         >
           + Schedule Appointment
@@ -441,7 +433,7 @@ export default function Appointments() {
         </div>
       )}
 
-      {showModal && (
+      {showModal && form && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-sm">
           <div className="surface-card w-full max-w-xl p-6">
             <h2 className="text-lg font-bold text-slate-900">
@@ -468,7 +460,7 @@ export default function Appointments() {
                 Patient
                 <select
                   value={form.patientId}
-                  onChange={(event) => setForm((current) => ({ ...current, patientId: event.target.value }))}
+                  onChange={(event) => setForm({ ...form, patientId: event.target.value })}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
                 >
                   {availablePatients.map((patient) => (
@@ -483,9 +475,7 @@ export default function Appointments() {
                 Doctor
                 <select
                   value={form.doctorId}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, doctorId: Number(event.target.value) }))
-                  }
+                  onChange={(event) => setForm({ ...form, doctorId: Number(event.target.value) })}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
                 >
                   {availableDoctors.map((doctor) => (
@@ -500,9 +490,7 @@ export default function Appointments() {
                 Visit Type
                 <select
                   value={form.type}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, type: event.target.value as VisitType }))
-                  }
+                  onChange={(event) => setForm({ ...form, type: event.target.value as VisitType })}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
                 >
                   <option value="Consultation">Consultation</option>
@@ -517,7 +505,7 @@ export default function Appointments() {
                 <input
                   type="date"
                   value={form.date}
-                  onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
+                  onChange={(event) => setForm(form ? { ...form, date: event.target.value } : form)}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
                 />
               </label>
@@ -527,7 +515,7 @@ export default function Appointments() {
                 <input
                   type="time"
                   value={form.time}
-                  onChange={(event) => setForm((current) => ({ ...current, time: event.target.value }))}
+                  onChange={(event) => setForm(form ? { ...form, time: event.target.value } : form)}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
                 />
               </label>
@@ -536,9 +524,7 @@ export default function Appointments() {
                 Mode
                 <select
                   value={form.mode}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, mode: event.target.value as VisitMode }))
-                  }
+                  onChange={(event) => setForm(form ? { ...form, mode: event.target.value as VisitMode } : form)}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
                 >
                   <option value="In-person">In-person</option>
@@ -551,7 +537,7 @@ export default function Appointments() {
                 <select
                   value={form.status}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, status: event.target.value as AppointmentStatus }))
+                    setForm(form ? { ...form, status: event.target.value as AppointmentStatus } : form)
                   }
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
                 >
@@ -567,7 +553,7 @@ export default function Appointments() {
               Notes
               <textarea
                 value={form.notes}
-                onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                onChange={(event) => setForm(form ? { ...form, notes: event.target.value } : form)}
                 rows={2}
                 placeholder="Optional clinical or scheduling notes"
                 className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"

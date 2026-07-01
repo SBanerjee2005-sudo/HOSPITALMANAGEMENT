@@ -1,13 +1,16 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { MapPin, Phone, Compass, AlertTriangle, Check, Info } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } from "react-leaflet";
+import L from "leaflet";
 import { hospitals as mockHospitals } from "../data";
 
-declare global {
-  interface Window {
-    google: any;
-  }
-}
-
+// Fix leaflet default icon path issues in React
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
 
 // Haversine formula to calculate distance in km
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -24,9 +27,40 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * c;
 }
 
+// A component to recenter map when selectedHospital changes
+function MapRecenter({ center }: { center: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.flyTo([center.lat, center.lng], 14, { duration: 1.5 });
+    }
+  }, [center, map]);
+  return null;
+}
+
+// A component to handle map clicks for user location
+function MapClickHandler({ setUserLocation }: { setUserLocation: (loc: { lat: number; lng: number }) => void }) {
+  useMapEvents({
+    click(e) {
+      setUserLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
+  return null;
+}
+
+// A component to auto-fit bounds based on hospitals and user location
+function BoundsFitter({ bounds }: { bounds: L.LatLngBounds | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (bounds && bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+    }
+  }, [bounds, map]);
+  return null;
+}
+
 export default function HospitalMap() {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any>(null);
+  const defaultCenter = { lat: 22.5726, lng: 88.3639 };
   const [hospitals, setHospitals] = useState<any[]>([]);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [radius, setRadius] = useState<number>(15); // Default 15km
@@ -35,17 +69,20 @@ export default function HospitalMap() {
   const [loading, setLoading] = useState(true);
   const [locationDenied, setLocationDenied] = useState(false);
   const [activeEmergency, setActiveEmergency] = useState<any | null>(null);
-
-  // Markers ref to clear them
-  const markersRef = useRef<any[]>([]);
-  const userMarkerRef = useRef<any>(null);
+  
+  // Create a ref to store a map instance if we need to call methods directly
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
 
   // 1. Fetch hospitals from backend or fallback to mock data
   useEffect(() => {
     const loadHospitalsData = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-        const response = await fetch(`${apiUrl}/hospitals`);
+        // Call the realtime API. Note: userLocation might be null on first render.
+        // We handle that by depending on userLocation below.
+        if (!userLocation) return;
+        
+        const response = await fetch(`${apiUrl}/realtime/hospitals?lat=${userLocation.lat}&lng=${userLocation.lng}&radius_km=${radius}`);
         if (response.ok) {
           const data = await response.json();
           const mapped = data.map((h: any) => ({
@@ -78,157 +115,31 @@ export default function HospitalMap() {
       setLoading(false);
     };
 
-    loadHospitalsData();
-  }, []);
-
-  // 2. Request user location and load Google Maps Script dynamically
-  useEffect(() => {
-    const defaultCenter = { lat: 22.5726, lng: 88.3639 };
-
-    const startGoogleMaps = () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const userLoc = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            };
-            setUserLocation(userLoc);
-            initMap(userLoc);
-          },
-          (err) => {
-            console.warn("Geolocation access denied or timed out:", err);
-            setLocationDenied(true);
-            setUserLocation(defaultCenter);
-            initMap(defaultCenter);
-          },
-          { enableHighAccuracy: true, timeout: 8000 }
-        );
-      } else {
-        setUserLocation(defaultCenter);
-        initMap(defaultCenter);
-      }
-    };
-
-    const initMap = async (center: { lat: number; lng: number }) => {
-      if (!mapRef.current) return;
-
-      try {
-        const { Map } = await window.google.maps.importLibrary("maps");
-
-        const mapInstance = new Map(mapRef.current, {
-          center: center,
-          zoom: 12,
-          mapId: "DEMO_MAP_ID", // Required for AdvancedMarkerElement
-        });
-
-        try {
-          const { AdvancedMarkerElement, PinElement } = await window.google.maps.importLibrary("marker");
-
-          // User location marker
-          const userMarker = new AdvancedMarkerElement({
-            position: center,
-            map: mapInstance,
-            title: "Your Location",
-            gmpDraggable: true,
-            content: new PinElement({
-              background: "#0284c7",
-              borderColor: "#ffffff",
-              glyphText: "📍",
-              scale: 1.1
-            })
-          });
-
-          // Listen for marker drag to update location
-          userMarker.addListener("dragend", () => {
-            const newPos = userMarker.position;
-            if (newPos) {
-              setUserLocation({
-                lat: typeof newPos.lat === "function" ? newPos.lat() : newPos.lat,
-                lng: typeof newPos.lng === "function" ? newPos.lng() : newPos.lng
-              });
-            }
-          });
-
-          // Map click to place user location marker
-          mapInstance.addListener("click", (e: any) => {
-            if (e.latLng) {
-              const lat = e.latLng.lat();
-              const lng = e.latLng.lng();
-              setUserLocation({ lat, lng });
-              userMarker.position = { lat, lng };
-            }
-          });
-
-          userMarkerRef.current = userMarker;
-        } catch (err) {
-          console.warn("Failed to load Advanced Markers library, falling back to legacy marker:", err);
-          const userMarker = new window.google.maps.Marker({
-            position: center,
-            map: mapInstance,
-            title: "Your Location",
-            draggable: true
-          });
-          userMarker.addListener("dragend", () => {
-            const newPos = userMarker.getPosition();
-            if (newPos) setUserLocation({ lat: newPos.lat(), lng: newPos.lng() });
-          });
-          mapInstance.addListener("click", (e: any) => {
-            if (e.latLng) {
-              const lat = e.latLng.lat();
-              const lng = e.latLng.lng();
-              setUserLocation({ lat, lng });
-              userMarker.setPosition({ lat, lng });
-            }
-          });
-          userMarkerRef.current = userMarker;
-        }
-
-        setMap(mapInstance);
-      } catch (err) {
-        console.error("Failed to load Google Maps library:", err);
-      }
-    };
-
-    // Load Script dynamically
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
-    const scriptId = "google-maps-api-script";
-    let script = document.getElementById(scriptId) as HTMLScriptElement;
-
-    if (!script) {
-      script = document.createElement("script");
-      script.id = scriptId;
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&loading=async`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        startGoogleMaps();
-      };
-      document.head.appendChild(script);
-    } else {
-      if (window.google && window.google.maps) {
-        startGoogleMaps();
-      } else {
-        script.addEventListener("load", startGoogleMaps);
-      }
+    if (userLocation) {
+      loadHospitalsData();
     }
+  }, [userLocation, radius]);
 
-    return () => {
-      markersRef.current.forEach((m) => {
-        if (typeof m.setMap === "function") {
-          m.setMap(null);
-        } else {
-          m.map = null;
-        }
-      });
-      if (userMarkerRef.current) {
-        if (typeof userMarkerRef.current.setMap === "function") {
-          userMarkerRef.current.setMap(null);
-        } else {
-          userMarkerRef.current.map = null;
-        }
-      }
-    };
+  // 2. Request user location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (err) => {
+          console.warn("Geolocation access denied or timed out:", err);
+          setLocationDenied(true);
+          setUserLocation(defaultCenter);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      setUserLocation(defaultCenter);
+    }
   }, []);
 
   const handleUseCurrentLocation = () => {
@@ -236,14 +147,10 @@ export default function HospitalMap() {
       navigator.geolocation.getCurrentPosition((position) => {
         const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
         setUserLocation(loc);
-        if (userMarkerRef.current) {
-          if (typeof userMarkerRef.current.setPosition === "function") {
-            userMarkerRef.current.setPosition(loc);
-          } else {
-            userMarkerRef.current.position = loc;
-          }
+        setSelectedHospital(null); // Clear selection to let map fly to user location if we had logic for it
+        if (mapInstance) {
+           mapInstance.flyTo([loc.lat, loc.lng], 14, { duration: 1.5 });
         }
-        if (map) map.panTo(loc);
       });
     }
   };
@@ -264,109 +171,54 @@ export default function HospitalMap() {
       .sort((a, b) => a.distance - b.distance);
   }, [hospitals, userLocation, radius, searchQuery]);
 
-  // Update Map Markers based on filtered list
-  useEffect(() => {
-    if (!map || !userLocation) return;
+  // Compute bounds for all markers
+  const bounds = useMemo(() => {
+    if (!userLocation) return null;
+    const b = L.latLngBounds([userLocation.lat, userLocation.lng], [userLocation.lat, userLocation.lng]);
+    if (searchQuery === "") {
+        processedHospitals.forEach((h) => {
+          b.extend([h.lat, h.lng]);
+        });
+    }
+    return b;
+  }, [processedHospitals, userLocation, searchQuery]);
 
-    markersRef.current.forEach((m) => {
-      if (typeof m.setMap === "function") {
-        m.setMap(null);
-      } else {
-        m.map = null;
-      }
+  // Create custom Leaflet Icons
+  const userIcon = new L.DivIcon({
+    className: "custom-user-marker",
+    html: `<div style="font-size: 24px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); transform: translateY(-50%);">📍</div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+
+  const getHospitalIcon = (bedsAvailable: number, isSelected: boolean) => {
+    const color = bedsAvailable > 0 ? "#10b981" : "#ef4444";
+    const glyph = bedsAvailable > 0 ? "🟢" : "🔴";
+    const scale = isSelected ? "scale(1.25)" : "scale(1.0)";
+    
+    return new L.DivIcon({
+      className: "custom-hospital-marker",
+      html: `
+        <div style="
+          background-color: ${color};
+          border: 2px solid white;
+          border-radius: 50%;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+          transform: ${scale};
+          transition: transform 0.2s;
+        ">
+          <span style="font-size: 12px;">${glyph}</span>
+        </div>
+      `,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
     });
-    markersRef.current = [];
-
-    const loadMarkers = async () => {
-      try {
-        const { LatLngBounds } = await window.google.maps.importLibrary("core");
-        const bounds = new LatLngBounds();
-        bounds.extend(userLocation);
-
-        const { AdvancedMarkerElement, PinElement } = await window.google.maps.importLibrary("marker");
-
-        processedHospitals.forEach((h) => {
-          const isSelected = selectedHospital?.id === h.id;
-          const pinColor = h.bedsAvailable > 0 ? "#10b981" : "#ef4444";
-
-          const pin = new PinElement({
-            background: pinColor,
-            borderColor: "#ffffff",
-            scale: isSelected ? 1.25 : 1.0,
-            glyphText: h.bedsAvailable > 0 ? "🟢" : "🔴",
-          });
-
-          const marker = new AdvancedMarkerElement({
-            position: { lat: h.lat, lng: h.lng },
-            map: map,
-            title: h.name,
-            content: pin,
-          });
-
-          marker.addListener("gmp-click", () => {
-            setSelectedHospital(h);
-            map.panTo({ lat: h.lat, lng: h.lng });
-            const element = document.getElementById(`hospital-card-${h.id}`);
-            if (element) {
-              element.scrollIntoView({ behavior: "smooth", block: "nearest" });
-            }
-          });
-
-          markersRef.current.push(marker);
-          bounds.extend({ lat: h.lat, lng: h.lng });
-        });
-
-        if (processedHospitals.length > 0 && searchQuery === "") {
-          map.fitBounds(bounds);
-          const listener = map.addListener("idle", () => {
-            if (map.getZoom()! > 15) map.setZoom(14);
-            window.google.maps.event.removeListener(listener);
-          });
-        }
-      } catch (err) {
-        console.warn("Failed to load Advanced Markers, falling back to legacy markers:", err);
-        const bounds = new window.google.maps.LatLngBounds();
-        bounds.extend(userLocation);
-
-        processedHospitals.forEach((h) => {
-          const isSelected = selectedHospital?.id === h.id;
-          const marker = new window.google.maps.Marker({
-            position: { lat: h.lat, lng: h.lng },
-            map: map,
-            title: h.name,
-            icon: {
-              url: h.bedsAvailable > 0
-                ? "https://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                : "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-              scaledSize: isSelected ? new window.google.maps.Size(42, 42) : new window.google.maps.Size(32, 32),
-            }
-          });
-
-          marker.addListener("click", () => {
-            setSelectedHospital(h);
-            map.panTo({ lat: h.lat, lng: h.lng });
-            const element = document.getElementById(`hospital-card-${h.id}`);
-            if (element) {
-              element.scrollIntoView({ behavior: "smooth", block: "nearest" });
-            }
-          });
-
-          markersRef.current.push(marker);
-          bounds.extend({ lat: h.lat, lng: h.lng });
-        });
-
-        if (processedHospitals.length > 0 && searchQuery === "") {
-          map.fitBounds(bounds);
-          const listener = map.addListener("idle", () => {
-            if (map.getZoom()! > 15) map.setZoom(14);
-            window.google.maps.event.removeListener(listener);
-          });
-        }
-      }
-    };
-
-    loadMarkers();
-  }, [map, processedHospitals, selectedHospital, userLocation]);
+  };
 
   return (
     <div className="flex flex-col h-[580px] bg-white text-slate-800 rounded-3xl overflow-hidden shadow-xl border border-slate-200">
@@ -434,12 +286,83 @@ export default function HospitalMap() {
         )}
       </div>
 
-      {/* Main Split Screen Area (fixed height and scrollable) */}
+      {/* Main Split Screen Area */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] overflow-hidden">
 
-        {/* Left pane: Google Map */}
-        <div className="relative h-full w-full bg-slate-100 border-r border-slate-200 min-h-[300px] lg:min-h-full">
-          <div ref={mapRef} className="absolute inset-0 w-full h-full" />
+        {/* Left pane: Leaflet Map */}
+        <div className="relative h-full w-full bg-slate-100 border-r border-slate-200 min-h-[300px] lg:min-h-full z-0">
+          {userLocation ? (
+            <MapContainer 
+              center={[userLocation.lat, userLocation.lng]} 
+              zoom={12} 
+              className="absolute inset-0 w-full h-full"
+              zoomControl={false}
+              ref={setMapInstance}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                maxZoom={20}
+              />
+              
+              <MapClickHandler setUserLocation={setUserLocation} />
+              {selectedHospital && <MapRecenter center={{ lat: selectedHospital.lat, lng: selectedHospital.lng }} />}
+              <BoundsFitter bounds={bounds} />
+
+              {/* User Location Marker (Draggable) */}
+              <Marker
+                position={[userLocation.lat, userLocation.lng]}
+                draggable={true}
+                eventHandlers={{
+                  dragend: (e) => {
+                    const marker = e.target;
+                    const position = marker.getLatLng();
+                    setUserLocation({ lat: position.lat, lng: position.lng });
+                  },
+                }}
+                icon={userIcon}
+                zIndexOffset={1000}
+              />
+              
+              {/* Radius Circle */}
+              <Circle
+                center={[userLocation.lat, userLocation.lng]}
+                radius={radius * 1000}
+                pathOptions={{ color: '#0ea5e9', fillColor: '#38bdf8', fillOpacity: 0.1, weight: 1 }}
+              />
+
+              {/* Hospital Markers */}
+              {processedHospitals.map(hospital => (
+                <Marker 
+                  key={hospital.id}
+                  position={[hospital.lat, hospital.lng]}
+                  icon={getHospitalIcon(hospital.bedsAvailable, selectedHospital?.id === hospital.id)}
+                  eventHandlers={{
+                    click: () => {
+                      setSelectedHospital(hospital);
+                      const element = document.getElementById(`hospital-card-${hospital.id}`);
+                      if (element) {
+                        element.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                      }
+                    }
+                  }}
+                >
+                  <Popup>
+                    <div className="text-center font-manrope">
+                      <h4 className="font-bold text-sm text-slate-800">{hospital.name}</h4>
+                      <p className="text-xs text-slate-500">{hospital.distance.toFixed(1)} km away</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          ) : (
+             <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center gap-3 z-10">
+              <div className="h-8 w-8 rounded-full border-4 border-cyan-600/20 border-t-cyan-600 animate-spin" />
+              <p className="text-xs font-semibold text-slate-500">Acquiring Location...</p>
+            </div>
+          )}
+          
           {loading && (
             <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center gap-3 z-10">
               <div className="h-8 w-8 rounded-full border-4 border-cyan-600/20 border-t-cyan-600 animate-spin" />
@@ -449,7 +372,7 @@ export default function HospitalMap() {
         </div>
 
         {/* Right pane: Sidebar Hospital List */}
-        <div className="flex flex-col h-full bg-slate-50 min-h-0 overflow-hidden">
+        <div className="flex flex-col h-full bg-slate-50 min-h-0 overflow-hidden relative z-10">
 
           <div className="p-3 bg-white border-b border-slate-200 flex justify-between items-center">
             <span className="text-xs font-bold text-slate-500">Hospitals in range ({processedHospitals.length})</span>
@@ -466,7 +389,6 @@ export default function HospitalMap() {
                   id={`hospital-card-${hospital.id}`}
                   onClick={() => {
                     setSelectedHospital(hospital);
-                    if (map) map.panTo({ lat: hospital.lat, lng: hospital.lng });
                   }}
                   className={`p-4 rounded-xl border transition-all duration-300 cursor-pointer ${isSelected
                     ? "bg-cyan-50/40 border-cyan-500 shadow-sm shadow-cyan-100 scale-[1.01]"

@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { getAppointmentsByDoctor, getPatientsByHospital, type AppointmentRecord } from "../../data";
+
+;
 import { getDoctorScope } from "../../utils/roleScope";
 
 type QueueStatus = "Current" | "Upcoming" | "Completed" | "Emergency";
@@ -9,6 +11,8 @@ type QueueRow = AppointmentRecord & {
 };
 
 export default function DoctorQueue() {
+  
+
   const { doctorId, hospitalId } = getDoctorScope();
   const patients = getPatientsByHospital(hospitalId);
   const [rows, setRows] = useState<QueueRow[]>(

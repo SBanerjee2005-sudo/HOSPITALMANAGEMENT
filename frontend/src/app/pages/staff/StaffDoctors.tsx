@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
-import { getDoctorSchedulesByHospital, getHospitalById, type Doctor } from "../../data";
+import { type Doctor, type DoctorSchedule } from "../../data";
+import { useDashboardData } from "../../hooks/useDashboardData";
+import { useDoctorData } from "../../hooks/useDoctorData";
 import { getStaffHospitalId } from "../../utils/roleScope";
 import { api } from "../../services/api.ts";
 import { Pencil, X, Loader2 } from "lucide-react";
 
 export default function StaffDoctors() {
+  const {  getHospitalById } = useDashboardData();
+  const { schedule: docSchedule } = useDoctorData();
+
   const hospitalId = getStaffHospitalId();
   const hospital = getHospitalById(hospitalId);
   const [query, setQuery] = useState("");
@@ -103,15 +108,15 @@ export default function StaffDoctors() {
     }
   };
 
-  const schedules = getDoctorSchedulesByHospital(hospitalId);
+  const schedules = docSchedule.filter((s: DoctorSchedule) => s.hospitalId === hospitalId);
 
   const departments = ["All", ...Array.from(new Set(doctorRows.map((doctor) => doctor.department)))];
 
   const doctorWorkload = doctorRows.map((doctor) => ({
     doctorId: doctor.id,
-    slots: schedules.filter((schedule) => schedule.doctorId === doctor.id).length,
+    slots: schedules.filter((schedule: DoctorSchedule) => schedule.doctorId === doctor.id).length,
     emergencyDuties: schedules.filter(
-      (schedule) => schedule.doctorId === doctor.id && schedule.isEmergencyDuty
+      (schedule: DoctorSchedule) => schedule.doctorId === doctor.id && schedule.isEmergencyDuty
     ).length,
   }));
 

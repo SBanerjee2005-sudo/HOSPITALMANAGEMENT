@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from app.dependencies import get_db
-from app.models import Patient, Doctor, Appointment, Billing, User
+from app.models import Patient, Doctor, Appointment, Billing, User, Hospital
 from app.schemas import LoginRequest, LoginResponse, AdminDashboard, UserRegisterRequest
 from app.utils.security import hash_password, verify_password
 
@@ -168,7 +168,7 @@ def get_admin_dashboard(db: Session = Depends(get_db)):
     billing_records = db.query(Billing).all()
     total_revenue = sum(b.amount for b in billing_records)
     
-    total_hospitals = 50 # Standard network count
+    total_hospitals = db.query(Hospital).count()
     
     return AdminDashboard(
         total_patients=total_patients,
