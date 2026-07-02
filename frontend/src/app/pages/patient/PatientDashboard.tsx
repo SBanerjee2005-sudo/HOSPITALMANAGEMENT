@@ -8,7 +8,6 @@ export default function PatientDashboard() {
   const { hospitals, loading } = useDashboardData();
   const [search, setSearch] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("All");
-  const [ratingFilter, setRatingFilter] = useState("All");
   const [availabilityFilter, setAvailabilityFilter] = useState("All");
 
   const specialties = useMemo(() => {
@@ -29,10 +28,6 @@ export default function PatientDashboard() {
       specialtyFilter === "All" ||
       hospital.specialties.some((specialty) => specialty === specialtyFilter);
 
-    const matchesRating =
-      ratingFilter === "All" ||
-      hospital.rating >= Number(ratingFilter);
-
     const matchesAvailability =
       availabilityFilter === "All" ||
       (availabilityFilter === "Open Now" && hospital.isOpen) ||
@@ -41,7 +36,6 @@ export default function PatientDashboard() {
     return (
       matchesSearch &&
       matchesSpecialty &&
-      matchesRating &&
       matchesAvailability
     );
   });
@@ -54,7 +48,7 @@ export default function PatientDashboard() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">Patient Portal</p>
           <h1 className="text-3xl font-extrabold text-slate-900">Nearby Hospitals in Kolkata</h1>
-          <p className="text-slate-600">Find care by specialty, rating, and current availability.</p>
+          <p className="text-slate-600">Find care by specialty and current availability.</p>
         </div>
       </div>
 
@@ -81,29 +75,16 @@ export default function PatientDashboard() {
           ))}
         </select>
 
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            value={ratingFilter}
-            onChange={(e) => setRatingFilter(e.target.value)}
-            aria-label="Filter by rating"
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
-          >
-            <option value="All">Any Rating</option>
-            <option value="4">4.0+</option>
-            <option value="4.5">4.5+</option>
-          </select>
-
-          <select
-            value={availabilityFilter}
-            onChange={(e) => setAvailabilityFilter(e.target.value)}
-            aria-label="Filter by availability"
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
-          >
-            <option>All</option>
-            <option>Open Now</option>
-            <option>Beds Available</option>
-          </select>
-        </div>
+        <select
+          value={availabilityFilter}
+          onChange={(e) => setAvailabilityFilter(e.target.value)}
+          aria-label="Filter by availability"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100"
+        >
+          <option>All</option>
+          <option>Open Now</option>
+          <option>Beds Available</option>
+        </select>
       </div>
 
       <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -125,7 +106,7 @@ export default function PatientDashboard() {
             <p className="text-slate-600">{hospital.location}</p>
 
             <p className="mt-3 text-sm text-slate-700">
-              Rating: <span className="font-semibold">{hospital.rating}</span> | Beds: <span className="font-semibold">{hospital.bedsAvailable}</span> | Emergency: <span className="font-semibold">{hospital.emergencyStatus}</span>
+              Beds: <span className="font-semibold">{hospital.bedsAvailable}</span> | Emergency: <span className="font-semibold">{hospital.emergencyStatus}</span>
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
